@@ -106,7 +106,7 @@
 </head>
 <body>
 
-    <div class="header" id="headerText">QR Twin Reader7</div>
+    <div class="header" id="headerText">QR Twin Reader3</div>
     
     <div class="camera-container">
         <video id="camera" playsinline autoplay muted></video>
@@ -135,6 +135,7 @@
                 </div>
                 <button class="btn" id="startScanBtn">スキャン開始</button>
                 <button class="btn" id="colorEncModeBtn" style="background-color:#00897B; display:none;">カラー符号化モード</button>
+                <button class="btn" id="qrMakeBtn" style="background-color:#6A1B9A;">QR作成</button>
                 <button class="btn secondary" id="logoutBtn" style="margin-top:10px; font-size:0.9rem;">端末情報を変更</button>
                 <!-- ★ 読取デバッグログ（蓄積）操作 -->
                 <div style="margin-top:12px; display:flex; gap:8px; justify-content:center; flex-wrap:wrap;">
@@ -143,6 +144,66 @@
                 </div>
                 <div id="debugLogCountLabel" style="margin-top:6px; font-size:0.8rem; color:#aaa;">蓄積ログ 0 件</div>
             </div>
+        </div>
+    </div>
+
+    <!-- ★QRツイン作成画面（白黒×白黒・誤り訂正M固定） -->
+    <div class="overlay-screen" id="qrMakeScreen">
+        <div class="overlay-box" style="max-width:460px; max-height:92%; overflow-y:auto;">
+            <h2 style="color:#BA68C8;">QRツイン作成</h2>
+
+            <div id="qrMakeForm">
+                <div class="qr-data-card" style="margin-bottom:12px;">
+                    <label for="qrMakeData1">第1QRのデータ</label>
+                    <textarea id="qrMakeData1" rows="3" placeholder="第1QRに入れる文字を入力"
+                              style="width:100%; box-sizing:border-box; font-size:1rem; background:#111; color:#fff;
+                                     border:1px solid #444; border-radius:6px; padding:8px; resize:vertical;"></textarea>
+                </div>
+                <div class="qr-data-card" style="margin-bottom:12px;">
+                    <label for="qrMakeData2">第2QRのデータ</label>
+                    <textarea id="qrMakeData2" rows="3" placeholder="第2QRに入れる文字を入力"
+                              style="width:100%; box-sizing:border-box; font-size:1rem; background:#111; color:#fff;
+                                     border:1px solid #444; border-radius:6px; padding:8px; resize:vertical;"></textarea>
+                </div>
+
+                <div class="qr-data-card" style="margin-bottom:12px;">
+                    <label>データ構成</label>
+                    <label style="display:flex; align-items:center; gap:8px; font-size:1rem; color:#eee; cursor:pointer; margin-bottom:6px;">
+                        <input type="radio" name="qrMakeMode" id="qrMakeModeNormal" value="normal" checked
+                               style="width:auto; accent-color:#BA68C8;">
+                        ノーマル
+                    </label>
+                    <label style="display:flex; align-items:center; gap:8px; font-size:1rem; color:#eee; cursor:pointer;">
+                        <input type="radio" name="qrMakeMode" id="qrMakeModeAppEnc" value="appEnc"
+                               style="width:auto; accent-color:#BA68C8;">
+                        ユーザ暗号化
+                    </label>
+                </div>
+
+                <div class="qr-data-card" id="qrMakePasswordCard" style="margin-bottom:12px; display:none;">
+                    <label for="qrMakePassword">第2QRの暗号化パスワード</label>
+                    <input type="text" id="qrMakePassword" placeholder="パスワードを入力"
+                           style="width:100%; box-sizing:border-box; font-size:1rem;" />
+                    <div style="font-size:0.78rem; color:#888; margin-top:6px;">
+                        作成日時が自動で付きます。読み取りにはこのパスワードが必要です。
+                    </div>
+                </div>
+
+                <button class="btn" id="qrMakeRunBtn" style="width:100%; background-color:#6A1B9A;">作成する</button>
+                <div id="qrMakeError" style="color:#ff5252; font-size:0.85rem; margin-top:8px; display:none;"></div>
+            </div>
+
+            <div id="qrMakeResult" style="display:none;">
+                <div style="background:#fff; padding:10px; border-radius:8px;">
+                    <canvas id="qrMakeCanvas" style="width:100%; height:auto; display:block; image-rendering:pixelated;"></canvas>
+                </div>
+                <div id="qrMakeInfo" style="font-size:0.82rem; color:#aaa; margin-top:8px; text-align:left;"></div>
+                <button class="btn" id="qrMakeShareBtn" style="width:100%; margin-top:12px; background-color:#2E7D32;">共有</button>
+                <button class="btn secondary" id="qrMakeSaveBtn" style="width:100%; margin-top:8px;">画像を保存</button>
+                <button class="btn secondary" id="qrMakeAgainBtn" style="width:100%; margin-top:8px;">続けて作成</button>
+            </div>
+
+            <button class="btn secondary" id="qrMakeCloseBtn" style="width:100%; margin-top:8px;">閉じる</button>
         </div>
     </div>
 
@@ -420,6 +481,8 @@
     </div>
 
     <script src="jsQR.js"></script>
+    <!-- ★QRツイン生成に使う（読取には不要） -->
+    <script src="qrcode.js"></script>
     <!-- ★Ver3.1：管理部48ビットの共通モジュール。生成ソフトと同一の定義を使う -->
     <script src="qrtwin-mgmt48.js"></script>
 
@@ -476,7 +539,13 @@
                 "QRコードがユーザ暗号化されています。パスワードAは以下です。": "This QR code is user-encrypted. Password A is shown below.",
                 "QRコードは暗号化されています": "This QR code is encrypted",
                 "QRコード作成日時": "QR code created at",
+                "QRツイン": "QR Twin",
+                "QRツインの管理部を扱う部品が読み込めていません": "The QR Twin management component could not be loaded",
+                "QRツイン作成": "Create QR Twin",
                 "QRツイン作成日時": "QR Twin created at",
+                "QR作成": "Create QR",
+                "QR作成の部品（qrcode.js）がQRツインに対応していません": "The QR creation component (qrcode.js) does not support QR Twin",
+                "QR作成の部品（qrcode.js）が読み込めていません": "The QR creation component (qrcode.js) could not be loaded",
                 "WEBアドレスとして読めませんでした: {v}": "Could not read as a web address: {v}",
                 "WEBデータ": "Web data",
                 "WEBデータ（{k}）": "Web data ({k})",
@@ -522,9 +591,13 @@
                 "デバッグログ削除": "Delete Debug Log",
                 "データID {v}（ユーザID {a} ＋ 個別データID {b}）": "Data ID {v} (user ID {a} + item data ID {b})",
                 "データIDが読み取れませんでした": "Could not read the data ID",
+                "データ構成": "Data structure",
+                "データ構成: {v}": "Data structure: {v}",
+                "ノーマル": "Normal",
                 "パスワードA": "Password A",
                 "パスワードAを入力": "Enter password A",
                 "パスワードF": "Password F",
+                "パスワードを入力": "Enter password",
                 "パスワードを入力してください": "Please enter the password",
                 "パスワードを入力してスキャン再開": "Enter password and resume scanning",
                 "ファイルのパスワードFは以下です": "File password F is shown below",
@@ -539,12 +612,20 @@
                 "下記は取得できた範囲の読取デバッグ情報です（蓄積済み）。": "Below is the scan debug info obtained so far (already stored).",
                 "不明": "Unknown",
                 "中": "Mid",
+                "作成する": "Create",
+                "作成できませんでした: {v}": "Could not create it: {v}",
                 "作成日時": "Created at",
+                "作成日時: {v}": "Created: {v}",
+                "作成日時が自動で付きます。読み取りにはこのパスワードが必要です。": "The creation date and time is added automatically. This password is required to read it.",
                 "例：手ブレが多い／反射あり／QRが小さい／ピントが合わない 等": "e.g. lots of camera shake / glare / QR too small / out of focus",
+                "保存できませんでした: {v}": "Could not save it: {v}",
                 "保存フレームから3/4領域化QRツインを復号中...": "Decoding the 3/4-region QR Twin from the saved frame...",
                 "保存済み画像から第2QRを復号中...": "Decoding the 2nd QR from the saved image...",
+                "共有": "Share",
+                "共有できませんでした: {v}": "Could not share it: {v}",
                 "利用者番号": "User number",
                 "取得中… {v}": "Fetching… {v}",
+                "型番: {n}（{v}×{v}モジュール）": "Version: {n} ({v}×{v} modules)",
                 "市町村コードが一致しません": "Municipality code does not match",
                 "弱": "Low",
                 "強": "High",
@@ -565,10 +646,12 @@
                 "暗号化+署名": "Encryption + signature",
                 "暗色（Twin1=黒, Twin2=白）": "Dark (Twin1=black, Twin2=white)",
                 "桃色": "Pink",
+                "構成: QRツイン（白黒×白黒）": "Structure: QR Twin (monochrome × monochrome)",
                 "横向き": "Landscape",
                 "水色": "Cyan",
                 "現在位置を取得中です。しばらくしてからもう一度お試しください": "Acquiring your location. Please try again shortly.",
                 "生成時と同じ色設定を選択してください": "Select the same color settings used when generating",
+                "画像を保存": "Save image",
                 "画像データ ID{v}": "Image data ID{v}",
                 "画面をタップして再生を許可してください": "Tap the screen to allow playback",
                 "登録": "Register",
@@ -581,7 +664,9 @@
                 "第1LQR": "1st LQR",
                 "第1QR": "1st QR",
                 "第1QR データ": "1st QR data",
+                "第1QRに入れる文字を入力": "Enter the text for the 1st QR",
                 "第1QRのデータ": "Data of the 1st QR",
+                "第1QRのデータを入力してください": "Please enter the data for the 1st QR",
                 "第1QRを探索中... (Hybrid)": "Searching for the 1st QR... (Hybrid)",
                 "第1QRを読取済み。パスワードA入力待ちです。": "1st QR read. Waiting for password A.",
                 "第1QRを読取済み。パスワード入力待ちです。": "1st QR read. Waiting for password entry.",
@@ -593,6 +678,10 @@
                 "第2LQR（埋草領域）": "2nd LQR (padding area)",
                 "第2QR": "2nd QR",
                 "第2QR データ": "2nd QR data",
+                "第2QRに入れる文字を入力": "Enter the text for the 2nd QR",
+                "第2QRのデータ": "Data of the 2nd QR",
+                "第2QRのデータを入力してください": "Please enter the data for the 2nd QR",
+                "第2QRの暗号化パスワード": "Encryption password for the 2nd QR",
                 "第2QRを探索中...": "Searching for the 2nd QR...",
                 "第2QRを探索中... (jsQR XOR)": "Searching for the 2nd QR... (jsQR XOR)",
                 "第2QR取得中... QRをそのままかざし続けてください": "Acquiring the 2nd QR... Keep holding the QR steady",
@@ -608,8 +697,10 @@
                 "第{n}LQR データ": "LQR {n} data",
                 "第{n}LQR データはWEB上（{k}）": "{n}th LQR data is on the web ({k})",
                 "第{n}QR": "QR {n}",
+                "管理部が不正です: {v}": "The management area is invalid: {v}",
                 "結合データ": "Merged data",
                 "結果表示": "Show result",
+                "続けて作成": "Create another",
                 "縦向き": "Portrait",
                 "署名データなし": "No signature data",
                 "署名解析エラー": "Signature parsing error",
@@ -621,6 +712,7 @@
                 "認証できました": "Verified",
                 "認証に失敗しました": "Verification failed",
                 "認証鍵": "Authentication key",
+                "誤り訂正レベル: M": "Error correction level: M",
                 "読み取りの有効期間が終了しました": "The reading validity period has expired",
                 "読取デバッグ情報": "Scan Debug Info",
                 "読取デバッグ情報をコピーしました": "Scan debug info copied",
@@ -635,7 +727,7 @@
                 "読取端末IDで制限されたQRツインを読む場合に登録してください。": "Register only when reading a QR Twin restricted by reader device ID.",
                 "読取結果": "Scan result",
                 "赤": "Red",
-                "通常": "Normal",
+                "通常": "Standard",
                 "通常の読み取りには登録は不要です。": "Registration is not required for normal scanning.",
                 "連続データ": "Continuous data",
                 "連続データ（結合）": "Continuous data (merged)",
@@ -673,7 +765,13 @@
                 "QRコードがユーザ暗号化されています。パスワードAは以下です。": "此QR碼已使用者加密。密碼A如下。",
                 "QRコードは暗号化されています": "此QR碼已加密",
                 "QRコード作成日時": "QR碼建立時間",
+                "QRツイン": "QR Twin",
+                "QRツインの管理部を扱う部品が読み込めていません": "無法載入QR Twin管理部元件",
+                "QRツイン作成": "建立QR Twin",
                 "QRツイン作成日時": "QR Twin建立時間",
+                "QR作成": "建立QR",
+                "QR作成の部品（qrcode.js）がQRツインに対応していません": "QR建立元件（qrcode.js）不支援QR Twin",
+                "QR作成の部品（qrcode.js）が読み込めていません": "無法載入QR建立元件（qrcode.js）",
                 "WEBアドレスとして読めませんでした: {v}": "無法以網址讀取：{v}",
                 "WEBデータ": "網頁資料",
                 "WEBデータ（{k}）": "WEB資料（{k}）",
@@ -719,9 +817,13 @@
                 "デバッグログ削除": "刪除除錯記錄",
                 "データID {v}（ユーザID {a} ＋ 個別データID {b}）": "資料ID {v}（使用者ID {a} ＋ 個別資料ID {b}）",
                 "データIDが読み取れませんでした": "無法讀取資料ID",
+                "データ構成": "資料結構",
+                "データ構成: {v}": "資料結構：{v}",
+                "ノーマル": "一般",
                 "パスワードA": "密碼A",
                 "パスワードAを入力": "輸入密碼A",
                 "パスワードF": "密碼F",
+                "パスワードを入力": "輸入密碼",
                 "パスワードを入力してください": "請輸入密碼",
                 "パスワードを入力してスキャン再開": "輸入密碼並繼續掃描",
                 "ファイルのパスワードFは以下です": "檔案密碼F如下",
@@ -736,12 +838,20 @@
                 "下記は取得できた範囲の読取デバッグ情報です（蓄積済み）。": "以下是已取得範圍的讀取除錯資訊（已儲存）。",
                 "不明": "不明",
                 "中": "中",
+                "作成する": "建立",
+                "作成できませんでした: {v}": "無法建立：{v}",
                 "作成日時": "建立時間",
+                "作成日時: {v}": "建立日期時間：{v}",
+                "作成日時が自動で付きます。読み取りにはこのパスワードが必要です。": "會自動附加建立日期時間。讀取時需要此密碼。",
                 "例：手ブレが多い／反射あり／QRが小さい／ピントが合わない 等": "例：手震嚴重／有反光／QR太小／對不到焦 等",
+                "保存できませんでした: {v}": "無法儲存：{v}",
                 "保存フレームから3/4領域化QRツインを復号中...": "正在從已儲存的畫格解碼3/4區域化QR Twin...",
                 "保存済み画像から第2QRを復号中...": "正在從已儲存的影像解碼第2QR...",
+                "共有": "分享",
+                "共有できませんでした: {v}": "無法分享：{v}",
                 "利用者番号": "使用者號碼",
                 "取得中… {v}": "取得中… {v}",
+                "型番: {n}（{v}×{v}モジュール）": "版本：{n}（{v}×{v}模組）",
                 "市町村コードが一致しません": "市町村代碼不符",
                 "弱": "弱",
                 "強": "強",
@@ -762,10 +872,12 @@
                 "暗号化+署名": "加密＋簽章",
                 "暗色（Twin1=黒, Twin2=白）": "暗色（Twin1=黑, Twin2=白）",
                 "桃色": "粉紅",
+                "構成: QRツイン（白黒×白黒）": "結構：QR Twin（黑白×黑白）",
                 "横向き": "橫向",
                 "水色": "水藍",
                 "現在位置を取得中です。しばらくしてからもう一度お試しください": "正在取得目前位置，請稍後再試。",
                 "生成時と同じ色設定を選択してください": "請選擇與產生時相同的顏色設定",
+                "画像を保存": "儲存影像",
                 "画像データ ID{v}": "影像資料 ID{v}",
                 "画面をタップして再生を許可してください": "請點選畫面以允許播放",
                 "登録": "註冊",
@@ -778,7 +890,9 @@
                 "第1LQR": "第1LQR",
                 "第1QR": "第1QR",
                 "第1QR データ": "第1QR資料",
+                "第1QRに入れる文字を入力": "輸入要放入第1QR的文字",
                 "第1QRのデータ": "第1QR的資料",
+                "第1QRのデータを入力してください": "請輸入第1QR的資料",
                 "第1QRを探索中... (Hybrid)": "正在搜尋第1QR...（Hybrid）",
                 "第1QRを読取済み。パスワードA入力待ちです。": "已讀取第1QR。等待輸入密碼A。",
                 "第1QRを読取済み。パスワード入力待ちです。": "已讀取第1QR。等待輸入密碼。",
@@ -790,6 +904,10 @@
                 "第2LQR（埋草領域）": "第2LQR（填充區域）",
                 "第2QR": "第2QR",
                 "第2QR データ": "第2QR資料",
+                "第2QRに入れる文字を入力": "輸入要放入第2QR的文字",
+                "第2QRのデータ": "第2QR的資料",
+                "第2QRのデータを入力してください": "請輸入第2QR的資料",
+                "第2QRの暗号化パスワード": "第2QR的加密密碼",
                 "第2QRを探索中...": "正在搜尋第2QR...",
                 "第2QRを探索中... (jsQR XOR)": "正在搜尋第2QR...（jsQR XOR）",
                 "第2QR取得中... QRをそのままかざし続けてください": "正在取得第2QR...請保持QR對準",
@@ -805,8 +923,10 @@
                 "第{n}LQR データ": "第{n}LQR資料",
                 "第{n}LQR データはWEB上（{k}）": "第{n}LQR資料在網頁上（{k}）",
                 "第{n}QR": "第{n}QR",
+                "管理部が不正です: {v}": "管理部不正確：{v}",
                 "結合データ": "合併資料",
                 "結果表示": "顯示結果",
+                "続けて作成": "繼續建立",
                 "縦向き": "直向",
                 "署名データなし": "無簽章資料",
                 "署名解析エラー": "簽章解析錯誤",
@@ -818,6 +938,7 @@
                 "認証できました": "已通過認證",
                 "認証に失敗しました": "認證失敗",
                 "認証鍵": "認證金鑰",
+                "誤り訂正レベル: M": "錯誤更正等級：M",
                 "読み取りの有効期間が終了しました": "讀取有效期間已結束",
                 "読取デバッグ情報": "讀取除錯資訊",
                 "読取デバッグ情報をコピーしました": "已複製讀取除錯資訊",
@@ -832,7 +953,7 @@
                 "読取端末IDで制限されたQRツインを読む場合に登録してください。": "讀取受讀取裝置ID限制的QR Twin時請註冊。",
                 "読取結果": "讀取結果",
                 "赤": "紅",
-                "通常": "一般",
+                "通常": "標準",
                 "通常の読み取りには登録は不要です。": "一般讀取無需註冊。",
                 "連続データ": "連續資料",
                 "連続データ（結合）": "連續資料（合併）",
@@ -870,7 +991,13 @@
                 "QRコードがユーザ暗号化されています。パスワードAは以下です。": "此二维码已用户加密。密码A如下。",
                 "QRコードは暗号化されています": "此二维码已加密",
                 "QRコード作成日時": "二维码创建时间",
+                "QRツイン": "QR Twin",
+                "QRツインの管理部を扱う部品が読み込めていません": "无法加载QR Twin管理部组件",
+                "QRツイン作成": "创建QR Twin",
                 "QRツイン作成日時": "QR Twin创建时间",
+                "QR作成": "创建QR",
+                "QR作成の部品（qrcode.js）がQRツインに対応していません": "QR创建组件（qrcode.js）不支持QR Twin",
+                "QR作成の部品（qrcode.js）が読み込めていません": "无法加载QR创建组件（qrcode.js）",
                 "WEBアドレスとして読めませんでした: {v}": "无法以网址读取：{v}",
                 "WEBデータ": "网页数据",
                 "WEBデータ（{k}）": "WEB数据（{k}）",
@@ -916,9 +1043,13 @@
                 "デバッグログ削除": "删除调试日志",
                 "データID {v}（ユーザID {a} ＋ 個別データID {b}）": "数据ID {v}（用户ID {a} ＋ 个别数据ID {b}）",
                 "データIDが読み取れませんでした": "无法读取数据ID",
+                "データ構成": "数据结构",
+                "データ構成: {v}": "数据结构：{v}",
+                "ノーマル": "普通",
                 "パスワードA": "密码A",
                 "パスワードAを入力": "输入密码A",
                 "パスワードF": "密码F",
+                "パスワードを入力": "输入密码",
                 "パスワードを入力してください": "请输入密码",
                 "パスワードを入力してスキャン再開": "输入密码并继续扫描",
                 "ファイルのパスワードFは以下です": "文件密码F如下",
@@ -933,12 +1064,20 @@
                 "下記は取得できた範囲の読取デバッグ情報です（蓄積済み）。": "以下是已获取范围的读取调试信息（已保存）。",
                 "不明": "未知",
                 "中": "中",
+                "作成する": "创建",
+                "作成できませんでした: {v}": "无法创建：{v}",
                 "作成日時": "创建时间",
+                "作成日時: {v}": "创建日期时间：{v}",
+                "作成日時が自動で付きます。読み取りにはこのパスワードが必要です。": "会自动附加创建日期时间。读取时需要此密码。",
                 "例：手ブレが多い／反射あり／QRが小さい／ピントが合わない 等": "例：抖动严重／有反光／QR太小／对不上焦 等",
+                "保存できませんでした: {v}": "无法保存：{v}",
                 "保存フレームから3/4領域化QRツインを復号中...": "正在从已保存的帧解码3/4区域化QR Twin...",
                 "保存済み画像から第2QRを復号中...": "正在从已保存的图像解码第2QR...",
+                "共有": "分享",
+                "共有できませんでした: {v}": "无法分享：{v}",
                 "利用者番号": "用户编号",
                 "取得中… {v}": "获取中… {v}",
+                "型番: {n}（{v}×{v}モジュール）": "版本：{n}（{v}×{v}模块）",
                 "市町村コードが一致しません": "市町村代码不符",
                 "弱": "弱",
                 "強": "强",
@@ -959,10 +1098,12 @@
                 "暗号化+署名": "加密＋签名",
                 "暗色（Twin1=黒, Twin2=白）": "暗色（Twin1=黑, Twin2=白）",
                 "桃色": "粉红",
+                "構成: QRツイン（白黒×白黒）": "结构：QR Twin（黑白×黑白）",
                 "横向き": "横向",
                 "水色": "浅蓝",
                 "現在位置を取得中です。しばらくしてからもう一度お試しください": "正在获取当前位置，请稍后再试。",
                 "生成時と同じ色設定を選択してください": "请选择与生成时相同的颜色设置",
+                "画像を保存": "保存图像",
                 "画像データ ID{v}": "图像数据 ID{v}",
                 "画面をタップして再生を許可してください": "请点击屏幕以允许播放",
                 "登録": "注册",
@@ -975,7 +1116,9 @@
                 "第1LQR": "第1LQR",
                 "第1QR": "第1QR",
                 "第1QR データ": "第1QR数据",
+                "第1QRに入れる文字を入力": "输入要放入第1QR的文字",
                 "第1QRのデータ": "第1QR的数据",
+                "第1QRのデータを入力してください": "请输入第1QR的数据",
                 "第1QRを探索中... (Hybrid)": "正在搜索第1QR...（Hybrid）",
                 "第1QRを読取済み。パスワードA入力待ちです。": "已读取第1QR。等待输入密码A。",
                 "第1QRを読取済み。パスワード入力待ちです。": "已读取第1QR。等待输入密码。",
@@ -987,6 +1130,10 @@
                 "第2LQR（埋草領域）": "第2LQR（填充区域）",
                 "第2QR": "第2QR",
                 "第2QR データ": "第2QR数据",
+                "第2QRに入れる文字を入力": "输入要放入第2QR的文字",
+                "第2QRのデータ": "第2QR的数据",
+                "第2QRのデータを入力してください": "请输入第2QR的数据",
+                "第2QRの暗号化パスワード": "第2QR的加密密码",
                 "第2QRを探索中...": "正在搜索第2QR...",
                 "第2QRを探索中... (jsQR XOR)": "正在搜索第2QR...（jsQR XOR）",
                 "第2QR取得中... QRをそのままかざし続けてください": "正在获取第2QR...请保持QR对准",
@@ -1002,8 +1149,10 @@
                 "第{n}LQR データ": "第{n}LQR数据",
                 "第{n}LQR データはWEB上（{k}）": "第{n}LQR数据在网页上（{k}）",
                 "第{n}QR": "第{n}QR",
+                "管理部が不正です: {v}": "管理部不正确：{v}",
                 "結合データ": "合并数据",
                 "結果表示": "显示结果",
+                "続けて作成": "继续创建",
                 "縦向き": "纵向",
                 "署名データなし": "无签名数据",
                 "署名解析エラー": "签名解析错误",
@@ -1015,6 +1164,7 @@
                 "認証できました": "已通过认证",
                 "認証に失敗しました": "认证失败",
                 "認証鍵": "认证密钥",
+                "誤り訂正レベル: M": "纠错等级：M",
                 "読み取りの有効期間が終了しました": "读取有效期间已结束",
                 "読取デバッグ情報": "读取调试信息",
                 "読取デバッグ情報をコピーしました": "已复制读取调试信息",
@@ -1029,7 +1179,7 @@
                 "読取端末IDで制限されたQRツインを読む場合に登録してください。": "读取受读取设备ID限制的QR Twin时请注册。",
                 "読取結果": "读取结果",
                 "赤": "红",
-                "通常": "普通",
+                "通常": "标准",
                 "通常の読み取りには登録は不要です。": "普通读取无需注册。",
                 "連続データ": "连续数据",
                 "連続データ（結合）": "连续数据（合并）",
@@ -1067,7 +1217,13 @@
                 "QRコードがユーザ暗号化されています。パスワードAは以下です。": "QR 코드가 사용자 암호화되어 있습니다. 비밀번호 A는 아래와 같습니다.",
                 "QRコードは暗号化されています": "QR 코드가 암호화되어 있습니다",
                 "QRコード作成日時": "QR 코드 생성 일시",
+                "QRツイン": "QR Twin",
+                "QRツインの管理部を扱う部品が読み込めていません": "QR Twin 관리부 부품을 읽어들이지 못했습니다",
+                "QRツイン作成": "QR Twin 만들기",
                 "QRツイン作成日時": "QR Twin 생성 일시",
+                "QR作成": "QR 만들기",
+                "QR作成の部品（qrcode.js）がQRツインに対応していません": "QR 작성 부품(qrcode.js)이 QR Twin에 대응하지 않습니다",
+                "QR作成の部品（qrcode.js）が読み込めていません": "QR 작성 부품(qrcode.js)을 읽어들이지 못했습니다",
                 "WEBアドレスとして読めませんでした: {v}": "WEB 주소로 읽을 수 없었습니다: {v}",
                 "WEBデータ": "WEB 데이터",
                 "WEBデータ（{k}）": "WEB 데이터({k})",
@@ -1113,9 +1269,13 @@
                 "デバッグログ削除": "디버그 로그 삭제",
                 "データID {v}（ユーザID {a} ＋ 個別データID {b}）": "데이터 ID {v}(사용자 ID {a} + 개별 데이터 ID {b})",
                 "データIDが読み取れませんでした": "데이터 ID를 읽을 수 없었습니다",
+                "データ構成": "데이터 구성",
+                "データ構成: {v}": "데이터 구성: {v}",
+                "ノーマル": "노멀",
                 "パスワードA": "비밀번호 A",
                 "パスワードAを入力": "비밀번호 A 입력",
                 "パスワードF": "비밀번호 F",
+                "パスワードを入力": "비밀번호 입력",
                 "パスワードを入力してください": "비밀번호를 입력하세요",
                 "パスワードを入力してスキャン再開": "비밀번호를 입력하고 스캔 재개",
                 "ファイルのパスワードFは以下です": "파일 비밀번호 F는 아래와 같습니다",
@@ -1130,12 +1290,20 @@
                 "下記は取得できた範囲の読取デバッグ情報です（蓄積済み）。": "아래는 취득한 범위의 판독 디버그 정보입니다(저장 완료).",
                 "不明": "알 수 없음",
                 "中": "중",
+                "作成する": "만들기",
+                "作成できませんでした: {v}": "만들 수 없었습니다: {v}",
                 "作成日時": "생성 일시",
+                "作成日時: {v}": "작성 일시: {v}",
+                "作成日時が自動で付きます。読み取りにはこのパスワードが必要です。": "작성 일시가 자동으로 부여됩니다. 판독에는 이 비밀번호가 필요합니다.",
                 "例：手ブレが多い／反射あり／QRが小さい／ピントが合わない 等": "예: 손떨림이 심함 / 반사 있음 / QR이 작음 / 초점이 안 맞음 등",
+                "保存できませんでした: {v}": "저장할 수 없었습니다: {v}",
                 "保存フレームから3/4領域化QRツインを復号中...": "저장 프레임에서 3/4 영역화 QR Twin 복호 중...",
                 "保存済み画像から第2QRを復号中...": "저장된 이미지에서 제2 QR 복호 중...",
+                "共有": "공유",
+                "共有できませんでした: {v}": "공유할 수 없었습니다: {v}",
                 "利用者番号": "이용자 번호",
                 "取得中… {v}": "가져오는 중… {v}",
+                "型番: {n}（{v}×{v}モジュール）": "버전: {n}({v}×{v} 모듈)",
                 "市町村コードが一致しません": "시정촌 코드가 일치하지 않습니다",
                 "弱": "약",
                 "強": "강",
@@ -1156,10 +1324,12 @@
                 "暗号化+署名": "암호화+서명",
                 "暗色（Twin1=黒, Twin2=白）": "어두운 색(Twin1=검정, Twin2=흰색)",
                 "桃色": "분홍",
+                "構成: QRツイン（白黒×白黒）": "구성: QR Twin(흑백×흑백)",
                 "横向き": "가로",
                 "水色": "하늘색",
                 "現在位置を取得中です。しばらくしてからもう一度お試しください": "현재 위치를 가져오는 중입니다. 잠시 후 다시 시도하세요.",
                 "生成時と同じ色設定を選択してください": "생성 시와 같은 색 설정을 선택하세요",
+                "画像を保存": "이미지 저장",
                 "画像データ ID{v}": "이미지 데이터 ID{v}",
                 "画面をタップして再生を許可してください": "화면을 탭하여 재생을 허용하세요",
                 "登録": "등록",
@@ -1172,7 +1342,9 @@
                 "第1LQR": "제1 LQR",
                 "第1QR": "제1 QR",
                 "第1QR データ": "제1 QR 데이터",
+                "第1QRに入れる文字を入力": "제1 QR에 넣을 문자를 입력",
                 "第1QRのデータ": "제1 QR의 데이터",
+                "第1QRのデータを入力してください": "제1 QR의 데이터를 입력하세요",
                 "第1QRを探索中... (Hybrid)": "제1 QR 탐색 중... (Hybrid)",
                 "第1QRを読取済み。パスワードA入力待ちです。": "제1 QR 판독 완료. 비밀번호 A 입력 대기 중입니다.",
                 "第1QRを読取済み。パスワード入力待ちです。": "제1 QR 판독 완료. 비밀번호 입력 대기 중입니다.",
@@ -1184,6 +1356,10 @@
                 "第2LQR（埋草領域）": "제2 LQR(패딩 영역)",
                 "第2QR": "제2 QR",
                 "第2QR データ": "제2 QR 데이터",
+                "第2QRに入れる文字を入力": "제2 QR에 넣을 문자를 입력",
+                "第2QRのデータ": "제2 QR의 데이터",
+                "第2QRのデータを入力してください": "제2 QR의 데이터를 입력하세요",
+                "第2QRの暗号化パスワード": "제2 QR의 암호화 비밀번호",
                 "第2QRを探索中...": "제2 QR 탐색 중...",
                 "第2QRを探索中... (jsQR XOR)": "제2 QR 탐색 중... (jsQR XOR)",
                 "第2QR取得中... QRをそのままかざし続けてください": "제2 QR 취득 중... QR을 그대로 비춰 주세요",
@@ -1199,8 +1375,10 @@
                 "第{n}LQR データ": "제{n}LQR 데이터",
                 "第{n}LQR データはWEB上（{k}）": "제{n} LQR 데이터는 웹상에 있습니다({k})",
                 "第{n}QR": "제{n}QR",
+                "管理部が不正です: {v}": "관리부가 올바르지 않습니다: {v}",
                 "結合データ": "결합 데이터",
                 "結果表示": "결과 표시",
+                "続けて作成": "계속 만들기",
                 "縦向き": "세로",
                 "署名データなし": "서명 데이터 없음",
                 "署名解析エラー": "서명 해석 오류",
@@ -1212,6 +1390,7 @@
                 "認証できました": "인증되었습니다",
                 "認証に失敗しました": "인증에 실패했습니다",
                 "認証鍵": "인증 키",
+                "誤り訂正レベル: M": "오류 정정 레벨: M",
                 "読み取りの有効期間が終了しました": "판독 유효 기간이 종료되었습니다",
                 "読取デバッグ情報": "판독 디버그 정보",
                 "読取デバッグ情報をコピーしました": "판독 디버그 정보를 복사했습니다",
@@ -1226,7 +1405,7 @@
                 "読取端末IDで制限されたQRツインを読む場合に登録してください。": "판독 단말 ID로 제한된 QR Twin을 읽을 때 등록하세요.",
                 "読取結果": "판독 결과",
                 "赤": "빨강",
-                "通常": "일반",
+                "通常": "표준",
                 "通常の読み取りには登録は不要です。": "일반 판독에는 등록이 필요 없습니다.",
                 "連続データ": "연속 데이터",
                 "連続データ（結合）": "연속 데이터(결합)",
@@ -1264,7 +1443,13 @@
                 "QRコードがユーザ暗号化されています。パスワードAは以下です。": "Kode QR terenkripsi pengguna. Kata sandi A di bawah ini.",
                 "QRコードは暗号化されています": "Kode QR ini terenkripsi",
                 "QRコード作成日時": "Kode QR dibuat pada",
+                "QRツイン": "QR Twin",
+                "QRツインの管理部を扱う部品が読み込めていません": "Komponen bagian manajemen QR Twin gagal dimuat",
+                "QRツイン作成": "Buat QR Twin",
                 "QRツイン作成日時": "QR Twin dibuat pada",
+                "QR作成": "Buat QR",
+                "QR作成の部品（qrcode.js）がQRツインに対応していません": "Komponen pembuat QR (qrcode.js) tidak mendukung QR Twin",
+                "QR作成の部品（qrcode.js）が読み込めていません": "Komponen pembuat QR (qrcode.js) gagal dimuat",
                 "WEBアドレスとして読めませんでした: {v}": "Tidak dapat dibaca sebagai alamat web: {v}",
                 "WEBデータ": "Data web",
                 "WEBデータ（{k}）": "Data web ({k})",
@@ -1310,9 +1495,13 @@
                 "デバッグログ削除": "Hapus Log Debug",
                 "データID {v}（ユーザID {a} ＋ 個別データID {b}）": "ID data {v} (ID pengguna {a} + ID data individu {b})",
                 "データIDが読み取れませんでした": "ID data tidak dapat dibaca",
+                "データ構成": "Struktur data",
+                "データ構成: {v}": "Struktur data: {v}",
+                "ノーマル": "Normal",
                 "パスワードA": "Kata sandi A",
                 "パスワードAを入力": "Masukkan kata sandi A",
                 "パスワードF": "Kata sandi F",
+                "パスワードを入力": "Ketik kata sandi",
                 "パスワードを入力してください": "Masukkan kata sandi",
                 "パスワードを入力してスキャン再開": "Masukkan kata sandi dan lanjutkan pindai",
                 "ファイルのパスワードFは以下です": "Kata sandi berkas F di bawah ini",
@@ -1327,12 +1516,20 @@
                 "下記は取得できた範囲の読取デバッグ情報です（蓄積済み）。": "Berikut info debug pemindaian yang berhasil diperoleh (sudah disimpan).",
                 "不明": "Tidak diketahui",
                 "中": "M",
+                "作成する": "Buat",
+                "作成できませんでした: {v}": "Tidak dapat dibuat: {v}",
                 "作成日時": "Dibuat pada",
+                "作成日時: {v}": "Dibuat: {v}",
+                "作成日時が自動で付きます。読み取りにはこのパスワードが必要です。": "Tanggal dan waktu pembuatan ditambahkan otomatis. Kata sandi ini diperlukan untuk membacanya.",
                 "例：手ブレが多い／反射あり／QRが小さい／ピントが合わない 等": "mis. banyak guncangan / ada pantulan / QR kecil / tidak fokus",
+                "保存できませんでした: {v}": "Tidak dapat disimpan: {v}",
                 "保存フレームから3/4領域化QRツインを復号中...": "Mendekode QR Twin 3/4 area dari bingkai tersimpan...",
                 "保存済み画像から第2QRを復号中...": "Mendekode QR ke-2 dari gambar tersimpan...",
+                "共有": "Bagikan",
+                "共有できませんでした: {v}": "Tidak dapat dibagikan: {v}",
                 "利用者番号": "Nomor pengguna",
                 "取得中… {v}": "Mengambil… {v}",
+                "型番: {n}（{v}×{v}モジュール）": "Versi: {n} ({v}×{v} modul)",
                 "市町村コードが一致しません": "Kode kotamadya tidak cocok",
                 "弱": "L",
                 "強": "H",
@@ -1353,10 +1550,12 @@
                 "暗号化+署名": "Enkripsi + tanda tangan",
                 "暗色（Twin1=黒, Twin2=白）": "Gelap (Twin1=hitam, Twin2=putih)",
                 "桃色": "Merah muda",
+                "構成: QRツイン（白黒×白黒）": "Struktur: QR Twin (hitam putih × hitam putih)",
                 "横向き": "Lanskap",
                 "水色": "Biru muda",
                 "現在位置を取得中です。しばらくしてからもう一度お試しください": "Sedang mengambil lokasi Anda. Coba lagi sebentar lagi.",
                 "生成時と同じ色設定を選択してください": "Pilih pengaturan warna yang sama seperti saat pembuatan",
+                "画像を保存": "Simpan gambar",
                 "画像データ ID{v}": "Data gambar ID{v}",
                 "画面をタップして再生を許可してください": "Ketuk layar untuk mengizinkan pemutaran",
                 "登録": "Daftar",
@@ -1369,7 +1568,9 @@
                 "第1LQR": "LQR ke-1",
                 "第1QR": "QR ke-1",
                 "第1QR データ": "Data QR ke-1",
+                "第1QRに入れる文字を入力": "Masukkan teks untuk QR ke-1",
                 "第1QRのデータ": "Data dari QR ke-1",
+                "第1QRのデータを入力してください": "Masukkan data untuk QR ke-1",
                 "第1QRを探索中... (Hybrid)": "Mencari QR ke-1... (Hybrid)",
                 "第1QRを読取済み。パスワードA入力待ちです。": "QR ke-1 terbaca. Menunggu kata sandi A.",
                 "第1QRを読取済み。パスワード入力待ちです。": "QR ke-1 terbaca. Menunggu masukan kata sandi.",
@@ -1381,6 +1582,10 @@
                 "第2LQR（埋草領域）": "LQR ke-2 (area isian)",
                 "第2QR": "QR ke-2",
                 "第2QR データ": "Data QR ke-2",
+                "第2QRに入れる文字を入力": "Masukkan teks untuk QR ke-2",
+                "第2QRのデータ": "Data dari QR ke-2",
+                "第2QRのデータを入力してください": "Masukkan data untuk QR ke-2",
+                "第2QRの暗号化パスワード": "Kata sandi enkripsi untuk QR ke-2",
                 "第2QRを探索中...": "Mencari QR ke-2...",
                 "第2QRを探索中... (jsQR XOR)": "Mencari QR ke-2... (jsQR XOR)",
                 "第2QR取得中... QRをそのままかざし続けてください": "Mengambil QR ke-2... Tahan QR tetap di posisi",
@@ -1396,8 +1601,10 @@
                 "第{n}LQR データ": "Data LQR {n}",
                 "第{n}LQR データはWEB上（{k}）": "Data LQR ke-{n} ada di web ({k})",
                 "第{n}QR": "QR {n}",
+                "管理部が不正です: {v}": "Bagian manajemen tidak valid: {v}",
                 "結合データ": "Data gabungan",
                 "結果表示": "Tampilkan hasil",
+                "続けて作成": "Buat lagi",
                 "縦向き": "Potret",
                 "署名データなし": "Tidak ada data tanda tangan",
                 "署名解析エラー": "Kesalahan penguraian tanda tangan",
@@ -1409,6 +1616,7 @@
                 "認証できました": "Terverifikasi",
                 "認証に失敗しました": "Verifikasi gagal",
                 "認証鍵": "Kunci autentikasi",
+                "誤り訂正レベル: M": "Tingkat koreksi kesalahan: M",
                 "読み取りの有効期間が終了しました": "Masa berlaku pembacaan telah berakhir",
                 "読取デバッグ情報": "Info Debug Pemindaian",
                 "読取デバッグ情報をコピーしました": "Info debug pemindaian disalin",
@@ -1423,7 +1631,7 @@
                 "読取端末IDで制限されたQRツインを読む場合に登録してください。": "Daftarkan hanya bila membaca QR Twin yang dibatasi ID perangkat pembaca.",
                 "読取結果": "Hasil pindai",
                 "赤": "Merah",
-                "通常": "Normal",
+                "通常": "Standar",
                 "通常の読み取りには登録は不要です。": "Pemindaian biasa tidak memerlukan pendaftaran.",
                 "連続データ": "Data berurutan",
                 "連続データ（結合）": "Data berurutan (digabung)",
@@ -1461,7 +1669,13 @@
                 "QRコードがユーザ暗号化されています。パスワードAは以下です。": "Mã QR được mã hóa người dùng. Mật khẩu A như sau.",
                 "QRコードは暗号化されています": "Mã QR này đã được mã hóa",
                 "QRコード作成日時": "Thời điểm tạo mã QR",
+                "QRツイン": "QR Twin",
+                "QRツインの管理部を扱う部品が読み込めていません": "Không tải được thành phần quản lý QR Twin",
+                "QRツイン作成": "Tạo QR Twin",
                 "QRツイン作成日時": "Thời điểm tạo QR Twin",
+                "QR作成": "Tạo QR",
+                "QR作成の部品（qrcode.js）がQRツインに対応していません": "Thành phần tạo QR (qrcode.js) không hỗ trợ QR Twin",
+                "QR作成の部品（qrcode.js）が読み込めていません": "Không tải được thành phần tạo QR (qrcode.js)",
                 "WEBアドレスとして読めませんでした: {v}": "Không đọc được dưới dạng địa chỉ web: {v}",
                 "WEBデータ": "Dữ liệu web",
                 "WEBデータ（{k}）": "Dữ liệu web ({k})",
@@ -1507,9 +1721,13 @@
                 "デバッグログ削除": "Xóa nhật ký gỡ lỗi",
                 "データID {v}（ユーザID {a} ＋ 個別データID {b}）": "ID dữ liệu {v} (ID người dùng {a} + ID dữ liệu riêng {b})",
                 "データIDが読み取れませんでした": "Không đọc được ID dữ liệu",
+                "データ構成": "Cấu trúc dữ liệu",
+                "データ構成: {v}": "Cấu trúc dữ liệu: {v}",
+                "ノーマル": "Bình thường",
                 "パスワードA": "Mật khẩu A",
                 "パスワードAを入力": "Nhập mật khẩu A",
                 "パスワードF": "Mật khẩu F",
+                "パスワードを入力": "Nhập mật khẩu",
                 "パスワードを入力してください": "Vui lòng nhập mật khẩu",
                 "パスワードを入力してスキャン再開": "Nhập mật khẩu và tiếp tục quét",
                 "ファイルのパスワードFは以下です": "Mật khẩu tệp F như sau",
@@ -1524,12 +1742,20 @@
                 "下記は取得できた範囲の読取デバッグ情報です（蓄積済み）。": "Dưới đây là thông tin gỡ lỗi quét đã thu được (đã lưu).",
                 "不明": "Không rõ",
                 "中": "TB",
+                "作成する": "Tạo",
+                "作成できませんでした: {v}": "Không thể tạo: {v}",
                 "作成日時": "Thời điểm tạo",
+                "作成日時: {v}": "Thời điểm tạo: {v}",
+                "作成日時が自動で付きます。読み取りにはこのパスワードが必要です。": "Ngày giờ tạo được thêm tự động. Cần mật khẩu này để đọc.",
                 "例：手ブレが多い／反射あり／QRが小さい／ピントが合わない 等": "vd: rung tay nhiều / bị lóa / QR nhỏ / không nét",
+                "保存できませんでした: {v}": "Không thể lưu: {v}",
                 "保存フレームから3/4領域化QRツインを復号中...": "Đang giải mã QR Twin 3/4 vùng từ khung đã lưu...",
                 "保存済み画像から第2QRを復号中...": "Đang giải mã QR thứ 2 từ ảnh đã lưu...",
+                "共有": "Chia sẻ",
+                "共有できませんでした: {v}": "Không thể chia sẻ: {v}",
                 "利用者番号": "Số người dùng",
                 "取得中… {v}": "Đang tải… {v}",
+                "型番: {n}（{v}×{v}モジュール）": "Phiên bản: {n} ({v}×{v} mô-đun)",
                 "市町村コードが一致しません": "Mã đơn vị hành chính không khớp",
                 "弱": "Yếu",
                 "強": "Mạnh",
@@ -1550,10 +1776,12 @@
                 "暗号化+署名": "Mã hóa + chữ ký",
                 "暗色（Twin1=黒, Twin2=白）": "Màu tối (Twin1=đen, Twin2=trắng)",
                 "桃色": "Hồng",
+                "構成: QRツイン（白黒×白黒）": "Cấu trúc: QR Twin (đen trắng × đen trắng)",
                 "横向き": "Ngang",
                 "水色": "Xanh nhạt",
                 "現在位置を取得中です。しばらくしてからもう一度お試しください": "Đang lấy vị trí hiện tại. Vui lòng thử lại sau giây lát.",
                 "生成時と同じ色設定を選択してください": "Chọn cùng thiết lập màu như khi tạo",
+                "画像を保存": "Lưu ảnh",
                 "画像データ ID{v}": "Dữ liệu ảnh ID{v}",
                 "画面をタップして再生を許可してください": "Chạm vào màn hình để cho phép phát",
                 "登録": "Đăng ký",
@@ -1566,7 +1794,9 @@
                 "第1LQR": "LQR thứ 1",
                 "第1QR": "QR thứ 1",
                 "第1QR データ": "Dữ liệu QR thứ 1",
+                "第1QRに入れる文字を入力": "Nhập nội dung cho QR thứ 1",
                 "第1QRのデータ": "Dữ liệu của QR thứ 1",
+                "第1QRのデータを入力してください": "Vui lòng nhập dữ liệu cho QR thứ 1",
                 "第1QRを探索中... (Hybrid)": "Đang tìm QR thứ 1... (Hybrid)",
                 "第1QRを読取済み。パスワードA入力待ちです。": "Đã đọc QR thứ 1. Đang chờ mật khẩu A.",
                 "第1QRを読取済み。パスワード入力待ちです。": "Đã đọc QR thứ 1. Đang chờ nhập mật khẩu.",
@@ -1578,6 +1808,10 @@
                 "第2LQR（埋草領域）": "LQR thứ 2 (vùng đệm)",
                 "第2QR": "QR thứ 2",
                 "第2QR データ": "Dữ liệu QR thứ 2",
+                "第2QRに入れる文字を入力": "Nhập nội dung cho QR thứ 2",
+                "第2QRのデータ": "Dữ liệu của QR thứ 2",
+                "第2QRのデータを入力してください": "Vui lòng nhập dữ liệu cho QR thứ 2",
+                "第2QRの暗号化パスワード": "Mật khẩu mã hóa cho QR thứ 2",
                 "第2QRを探索中...": "Đang tìm QR thứ 2...",
                 "第2QRを探索中... (jsQR XOR)": "Đang tìm QR thứ 2... (jsQR XOR)",
                 "第2QR取得中... QRをそのままかざし続けてください": "Đang lấy QR thứ 2... Giữ nguyên mã QR",
@@ -1593,8 +1827,10 @@
                 "第{n}LQR データ": "Dữ liệu LQR {n}",
                 "第{n}LQR データはWEB上（{k}）": "Dữ liệu LQR thứ {n} nằm trên web ({k})",
                 "第{n}QR": "QR {n}",
+                "管理部が不正です: {v}": "Phần quản lý không hợp lệ: {v}",
                 "結合データ": "Dữ liệu đã ghép",
                 "結果表示": "Hiển thị kết quả",
+                "続けて作成": "Tạo tiếp",
                 "縦向き": "Dọc",
                 "署名データなし": "Không có dữ liệu chữ ký",
                 "署名解析エラー": "Lỗi phân tích chữ ký",
@@ -1606,6 +1842,7 @@
                 "認証できました": "Đã xác thực",
                 "認証に失敗しました": "Xác thực thất bại",
                 "認証鍵": "Khóa xác thực",
+                "誤り訂正レベル: M": "Mức sửa lỗi: M",
                 "読み取りの有効期間が終了しました": "Thời hạn đọc đã kết thúc",
                 "読取デバッグ情報": "Thông tin gỡ lỗi quét",
                 "読取デバッグ情報をコピーしました": "Đã sao chép thông tin gỡ lỗi",
@@ -1620,7 +1857,7 @@
                 "読取端末IDで制限されたQRツインを読む場合に登録してください。": "Hãy đăng ký khi đọc QR Twin bị giới hạn theo ID thiết bị đọc.",
                 "読取結果": "Kết quả đọc",
                 "赤": "Đỏ",
-                "通常": "Thông thường",
+                "通常": "Tiêu chuẩn",
                 "通常の読み取りには登録は不要です。": "Quét thông thường không cần đăng ký.",
                 "連続データ": "Dữ liệu liên tục",
                 "連続データ（結合）": "Dữ liệu liên tục (đã ghép)",
@@ -1658,7 +1895,13 @@
                 "QRコードがユーザ暗号化されています。パスワードAは以下です。": "El código QR tiene cifrado de usuario. La contraseña A es la siguiente.",
                 "QRコードは暗号化されています": "El código QR está cifrado",
                 "QRコード作成日時": "Fecha de creación del código QR",
+                "QRツイン": "QR Twin",
+                "QRツインの管理部を扱う部品が読み込めていません": "No se pudo cargar el componente de gestión del QR Twin",
+                "QRツイン作成": "Crear QR Twin",
                 "QRツイン作成日時": "Fecha de creación del QR Twin",
+                "QR作成": "Crear QR",
+                "QR作成の部品（qrcode.js）がQRツインに対応していません": "El componente de creación de QR (qrcode.js) no admite QR Twin",
+                "QR作成の部品（qrcode.js）が読み込めていません": "No se pudo cargar el componente de creación de QR (qrcode.js)",
                 "WEBアドレスとして読めませんでした: {v}": "No se pudo leer como dirección web: {v}",
                 "WEBデータ": "Datos web",
                 "WEBデータ（{k}）": "Datos web ({k})",
@@ -1704,9 +1947,13 @@
                 "デバッグログ削除": "Borrar registro de depuración",
                 "データID {v}（ユーザID {a} ＋ 個別データID {b}）": "ID de datos {v} (ID de usuario {a} + ID de datos individual {b})",
                 "データIDが読み取れませんでした": "No se pudo leer el ID de datos",
+                "データ構成": "Estructura de datos",
+                "データ構成: {v}": "Estructura de datos: {v}",
+                "ノーマル": "Normal",
                 "パスワードA": "Contraseña A",
                 "パスワードAを入力": "Introducir contraseña A",
                 "パスワードF": "Contraseña F",
+                "パスワードを入力": "Introducir contraseña",
                 "パスワードを入力してください": "Introduzca la contraseña",
                 "パスワードを入力してスキャン再開": "Introduzca la contraseña y reanude",
                 "ファイルのパスワードFは以下です": "La contraseña de archivo F es la siguiente",
@@ -1721,12 +1968,20 @@
                 "下記は取得できた範囲の読取デバッグ情報です（蓄積済み）。": "A continuación, la información de depuración obtenida (ya almacenada).",
                 "不明": "Desconocido",
                 "中": "Media",
+                "作成する": "Crear",
+                "作成できませんでした: {v}": "No se pudo crear: {v}",
                 "作成日時": "Fecha de creación",
+                "作成日時: {v}": "Creado: {v}",
+                "作成日時が自動で付きます。読み取りにはこのパスワードが必要です。": "La fecha y hora de creación se añaden automáticamente. Esta contraseña es necesaria para leerlo.",
                 "例：手ブレが多い／反射あり／QRが小さい／ピントが合わない 等": "p. ej. mucho temblor / reflejos / QR pequeño / desenfocado",
+                "保存できませんでした: {v}": "No se pudo guardar: {v}",
                 "保存フレームから3/4領域化QRツインを復号中...": "Descifrando el QR Twin de 3/4 regiones desde el fotograma guardado...",
                 "保存済み画像から第2QRを復号中...": "Descifrando el 2.º QR de la imagen guardada...",
+                "共有": "Compartir",
+                "共有できませんでした: {v}": "No se pudo compartir: {v}",
                 "利用者番号": "Número de usuario",
                 "取得中… {v}": "Obteniendo… {v}",
+                "型番: {n}（{v}×{v}モジュール）": "Versión: {n} ({v}×{v} módulos)",
                 "市町村コードが一致しません": "El código de municipio no coincide",
                 "弱": "Baja",
                 "強": "Alta",
@@ -1747,10 +2002,12 @@
                 "暗号化+署名": "Cifrado + firma",
                 "暗色（Twin1=黒, Twin2=白）": "Oscuro (Twin1=negro, Twin2=blanco)",
                 "桃色": "Rosa",
+                "構成: QRツイン（白黒×白黒）": "Estructura: QR Twin (monocromo × monocromo)",
                 "横向き": "Horizontal",
                 "水色": "Cian",
                 "現在位置を取得中です。しばらくしてからもう一度お試しください": "Obteniendo su ubicación. Inténtelo de nuevo en breve.",
                 "生成時と同じ色設定を選択してください": "Seleccione los mismos ajustes de color usados al generar",
+                "画像を保存": "Guardar imagen",
                 "画像データ ID{v}": "Datos de imagen ID{v}",
                 "画面をタップして再生を許可してください": "Toque la pantalla para permitir la reproducción",
                 "登録": "Registrar",
@@ -1763,7 +2020,9 @@
                 "第1LQR": "1.º LQR",
                 "第1QR": "1.º QR",
                 "第1QR データ": "Datos del 1.º QR",
+                "第1QRに入れる文字を入力": "Introduzca el texto del primer QR",
                 "第1QRのデータ": "Datos del primer QR",
+                "第1QRのデータを入力してください": "Introduzca los datos del primer QR",
                 "第1QRを探索中... (Hybrid)": "Buscando el 1.º QR... (Hybrid)",
                 "第1QRを読取済み。パスワードA入力待ちです。": "1.º QR leído. Esperando la contraseña A.",
                 "第1QRを読取済み。パスワード入力待ちです。": "1.º QR leído. Esperando la contraseña.",
@@ -1775,6 +2034,10 @@
                 "第2LQR（埋草領域）": "2.º LQR (área de relleno)",
                 "第2QR": "2.º QR",
                 "第2QR データ": "Datos del 2.º QR",
+                "第2QRに入れる文字を入力": "Introduzca el texto del segundo QR",
+                "第2QRのデータ": "Datos del segundo QR",
+                "第2QRのデータを入力してください": "Introduzca los datos del segundo QR",
+                "第2QRの暗号化パスワード": "Contraseña de cifrado del segundo QR",
                 "第2QRを探索中...": "Buscando el 2.º QR...",
                 "第2QRを探索中... (jsQR XOR)": "Buscando el 2.º QR... (jsQR XOR)",
                 "第2QR取得中... QRをそのままかざし続けてください": "Obteniendo el 2.º QR... Mantenga el QR estable",
@@ -1790,8 +2053,10 @@
                 "第{n}LQR データ": "Datos del LQR {n}",
                 "第{n}LQR データはWEB上（{k}）": "Los datos del LQR {n} están en la web ({k})",
                 "第{n}QR": "QR {n}",
+                "管理部が不正です: {v}": "El área de gestión no es válida: {v}",
                 "結合データ": "Datos combinados",
                 "結果表示": "Mostrar resultado",
+                "続けて作成": "Crear otro",
                 "縦向き": "Vertical",
                 "署名データなし": "Sin datos de firma",
                 "署名解析エラー": "Error de análisis de la firma",
@@ -1803,6 +2068,7 @@
                 "認証できました": "Autenticado correctamente",
                 "認証に失敗しました": "Falló la autenticación",
                 "認証鍵": "Clave de autenticación",
+                "誤り訂正レベル: M": "Nivel de corrección de errores: M",
                 "読み取りの有効期間が終了しました": "El periodo de validez de lectura ha terminado",
                 "読取デバッグ情報": "Información de depuración",
                 "読取デバッグ情報をコピーしました": "Información de depuración copiada",
@@ -1817,7 +2083,7 @@
                 "読取端末IDで制限されたQRツインを読む場合に登録してください。": "Regístrese solo si va a leer un QR Twin restringido por ID de dispositivo lector.",
                 "読取結果": "Resultado de lectura",
                 "赤": "Rojo",
-                "通常": "Normal",
+                "通常": "Estándar",
                 "通常の読み取りには登録は不要です。": "No es necesario registrarse para la lectura normal.",
                 "連続データ": "Datos continuos",
                 "連続データ（結合）": "Datos continuos (combinados)",
@@ -1855,7 +2121,13 @@
                 "QRコードがユーザ暗号化されています。パスワードAは以下です。": "Ce code QR est chiffré par l’utilisateur. Le mot de passe A est indiqué ci-dessous.",
                 "QRコードは暗号化されています": "Ce code QR est chiffré",
                 "QRコード作成日時": "Date de création du code QR",
+                "QRツイン": "QR Twin",
+                "QRツインの管理部を扱う部品が読み込めていません": "Le composant de gestion du QR Twin n’a pas pu être chargé",
+                "QRツイン作成": "Créer un QR Twin",
                 "QRツイン作成日時": "Date de création du QR Twin",
+                "QR作成": "Créer un QR",
+                "QR作成の部品（qrcode.js）がQRツインに対応していません": "Le composant de création de QR (qrcode.js) ne prend pas en charge le QR Twin",
+                "QR作成の部品（qrcode.js）が読み込めていません": "Le composant de création de QR (qrcode.js) n’a pas pu être chargé",
                 "WEBアドレスとして読めませんでした: {v}": "Lecture comme adresse web impossible : {v}",
                 "WEBデータ": "Données web",
                 "WEBデータ（{k}）": "Données web ({k})",
@@ -1901,9 +2173,13 @@
                 "デバッグログ削除": "Supprimer le journal de débogage",
                 "データID {v}（ユーザID {a} ＋ 個別データID {b}）": "ID de données {v} (ID utilisateur {a} + ID de donnée {b})",
                 "データIDが読み取れませんでした": "Impossible de lire l’ID de données",
+                "データ構成": "Structure de données",
+                "データ構成: {v}": "Structure de données : {v}",
+                "ノーマル": "Normal",
                 "パスワードA": "Mot de passe A",
                 "パスワードAを入力": "Saisir le mot de passe A",
                 "パスワードF": "Mot de passe F",
+                "パスワードを入力": "Saisir le mot de passe",
                 "パスワードを入力してください": "Veuillez saisir le mot de passe",
                 "パスワードを入力してスキャン再開": "Saisir le mot de passe et reprendre",
                 "ファイルのパスワードFは以下です": "Le mot de passe de fichier F est indiqué ci-dessous",
@@ -1918,12 +2194,20 @@
                 "下記は取得できた範囲の読取デバッグ情報です（蓄積済み）。": "Ci-dessous, les informations de débogage obtenues (déjà enregistrées).",
                 "不明": "Inconnu",
                 "中": "Moyen",
+                "作成する": "Créer",
+                "作成できませんでした: {v}": "Impossible de créer : {v}",
                 "作成日時": "Date de création",
+                "作成日時: {v}": "Créé le : {v}",
+                "作成日時が自動で付きます。読み取りにはこのパスワードが必要です。": "La date et l’heure de création sont ajoutées automatiquement. Ce mot de passe est nécessaire pour la lecture.",
                 "例：手ブレが多い／反射あり／QRが小さい／ピントが合わない 等": "p. ex. beaucoup de tremblements / reflets / QR trop petit / flou",
+                "保存できませんでした: {v}": "Impossible d’enregistrer : {v}",
                 "保存フレームから3/4領域化QRツインを復号中...": "Décodage du QR Twin à 3/4 régions depuis l’image enregistrée...",
                 "保存済み画像から第2QRを復号中...": "Décodage du 2e QR à partir de l’image enregistrée...",
+                "共有": "Partager",
+                "共有できませんでした: {v}": "Impossible de partager : {v}",
                 "利用者番号": "Numéro d’utilisateur",
                 "取得中… {v}": "Récupération… {v}",
+                "型番: {n}（{v}×{v}モジュール）": "Version : {n} ({v}×{v} modules)",
                 "市町村コードが一致しません": "Le code de commune ne correspond pas",
                 "弱": "Faible",
                 "強": "Fort",
@@ -1944,10 +2228,12 @@
                 "暗号化+署名": "Chiffrement + signature",
                 "暗色（Twin1=黒, Twin2=白）": "Foncé (Twin1=noir, Twin2=blanc)",
                 "桃色": "Rose",
+                "構成: QRツイン（白黒×白黒）": "Structure : QR Twin (monochrome × monochrome)",
                 "横向き": "Paysage",
                 "水色": "Cyan",
                 "現在位置を取得中です。しばらくしてからもう一度お試しください": "Acquisition de votre position. Veuillez réessayer sous peu.",
                 "生成時と同じ色設定を選択してください": "Sélectionnez les mêmes réglages de couleur qu’à la génération",
+                "画像を保存": "Enregistrer l’image",
                 "画像データ ID{v}": "Données d’image ID{v}",
                 "画面をタップして再生を許可してください": "Appuyez sur l’écran pour autoriser la lecture",
                 "登録": "Enregistrer",
@@ -1960,7 +2246,9 @@
                 "第1LQR": "1er LQR",
                 "第1QR": "1er QR",
                 "第1QR データ": "Données du 1er QR",
+                "第1QRに入れる文字を入力": "Saisissez le texte du premier QR",
                 "第1QRのデータ": "Données du premier QR",
+                "第1QRのデータを入力してください": "Veuillez saisir les données du premier QR",
                 "第1QRを探索中... (Hybrid)": "Recherche du 1er QR... (Hybrid)",
                 "第1QRを読取済み。パスワードA入力待ちです。": "1er QR lu. En attente du mot de passe A.",
                 "第1QRを読取済み。パスワード入力待ちです。": "1er QR lu. En attente du mot de passe.",
@@ -1972,6 +2260,10 @@
                 "第2LQR（埋草領域）": "2e LQR (zone de remplissage)",
                 "第2QR": "2e QR",
                 "第2QR データ": "Données du 2e QR",
+                "第2QRに入れる文字を入力": "Saisissez le texte du deuxième QR",
+                "第2QRのデータ": "Données du deuxième QR",
+                "第2QRのデータを入力してください": "Veuillez saisir les données du deuxième QR",
+                "第2QRの暗号化パスワード": "Mot de passe de chiffrement du deuxième QR",
                 "第2QRを探索中...": "Recherche du 2e QR...",
                 "第2QRを探索中... (jsQR XOR)": "Recherche du 2e QR... (jsQR XOR)",
                 "第2QR取得中... QRをそのままかざし続けてください": "Acquisition du 2e QR... Maintenez le QR en place",
@@ -1987,8 +2279,10 @@
                 "第{n}LQR データ": "Données du LQR {n}",
                 "第{n}LQR データはWEB上（{k}）": "Les données du LQR {n} sont sur le web ({k})",
                 "第{n}QR": "QR {n}",
+                "管理部が不正です: {v}": "La zone de gestion est invalide : {v}",
                 "結合データ": "Données fusionnées",
                 "結果表示": "Afficher le résultat",
+                "続けて作成": "En créer un autre",
                 "縦向き": "Portrait",
                 "署名データなし": "Aucune donnée de signature",
                 "署名解析エラー": "Erreur d’analyse de la signature",
@@ -2000,6 +2294,7 @@
                 "認証できました": "Authentification réussie",
                 "認証に失敗しました": "Échec de l’authentification",
                 "認証鍵": "Clé d’authentification",
+                "誤り訂正レベル: M": "Niveau de correction d’erreurs : M",
                 "読み取りの有効期間が終了しました": "La période de validité de lecture est terminée",
                 "読取デバッグ情報": "Infos de débogage",
                 "読取デバッグ情報をコピーしました": "Infos de débogage copiées",
@@ -2014,7 +2309,7 @@
                 "読取端末IDで制限されたQRツインを読む場合に登録してください。": "Enregistrez-vous uniquement pour lire un QR Twin restreint par identifiant de lecteur.",
                 "読取結果": "Résultat de lecture",
                 "赤": "Rouge",
-                "通常": "Normal",
+                "通常": "Standard",
                 "通常の読み取りには登録は不要です。": "Aucun enregistrement n’est requis pour une lecture normale.",
                 "連続データ": "Données continues",
                 "連続データ（結合）": "Données continues (fusionnées)",
@@ -2052,7 +2347,13 @@
                 "QRコードがユーザ暗号化されています。パスワードAは以下です。": "Dieser QR-Code ist benutzerverschlüsselt. Passwort A lautet:",
                 "QRコードは暗号化されています": "Dieser QR-Code ist verschlüsselt",
                 "QRコード作成日時": "QR-Code erstellt am",
+                "QRツイン": "QR Twin",
+                "QRツインの管理部を扱う部品が読み込めていません": "Die QR-Twin-Verwaltungskomponente konnte nicht geladen werden",
+                "QRツイン作成": "QR Twin erstellen",
                 "QRツイン作成日時": "QR Twin erstellt am",
+                "QR作成": "QR erstellen",
+                "QR作成の部品（qrcode.js）がQRツインに対応していません": "Die QR-Erstellungskomponente (qrcode.js) unterstützt QR Twin nicht",
+                "QR作成の部品（qrcode.js）が読み込めていません": "Die QR-Erstellungskomponente (qrcode.js) konnte nicht geladen werden",
                 "WEBアドレスとして読めませんでした: {v}": "Konnte nicht als Webadresse gelesen werden: {v}",
                 "WEBデータ": "Web-Daten",
                 "WEBデータ（{k}）": "Webdaten ({k})",
@@ -2098,9 +2399,13 @@
                 "デバッグログ削除": "Debug-Log löschen",
                 "データID {v}（ユーザID {a} ＋ 個別データID {b}）": "Daten-ID {v} (Benutzer-ID {a} + Einzeldaten-ID {b})",
                 "データIDが読み取れませんでした": "Daten-ID konnte nicht gelesen werden",
+                "データ構成": "Datenstruktur",
+                "データ構成: {v}": "Datenstruktur: {v}",
+                "ノーマル": "Normal",
                 "パスワードA": "Passwort A",
                 "パスワードAを入力": "Passwort A eingeben",
                 "パスワードF": "Passwort F",
+                "パスワードを入力": "Passwort eingeben",
                 "パスワードを入力してください": "Bitte Passwort eingeben",
                 "パスワードを入力してスキャン再開": "Passwort eingeben und Scan fortsetzen",
                 "ファイルのパスワードFは以下です": "Datei-Passwort F lautet:",
@@ -2115,12 +2420,20 @@
                 "下記は取得できた範囲の読取デバッグ情報です（蓄積済み）。": "Nachfolgend die bisher erfassten Debug-Informationen (bereits gespeichert).",
                 "不明": "Unbekannt",
                 "中": "Mittel",
+                "作成する": "Erstellen",
+                "作成できませんでした: {v}": "Konnte nicht erstellt werden: {v}",
                 "作成日時": "Erstellt am",
+                "作成日時: {v}": "Erstellt: {v}",
+                "作成日時が自動で付きます。読み取りにはこのパスワードが必要です。": "Erstellungsdatum und -zeit werden automatisch hinzugefügt. Zum Lesen wird dieses Passwort benötigt.",
                 "例：手ブレが多い／反射あり／QRが小さい／ピントが合わない 等": "z. B. starkes Verwackeln / Reflexionen / QR zu klein / unscharf",
+                "保存できませんでした: {v}": "Konnte nicht gespeichert werden: {v}",
                 "保存フレームから3/4領域化QRツインを復号中...": "3/4-Bereich-QR-Twin wird aus dem gespeicherten Einzelbild decodiert...",
                 "保存済み画像から第2QRを復号中...": "2. QR wird aus dem gespeicherten Bild decodiert...",
+                "共有": "Teilen",
+                "共有できませんでした: {v}": "Konnte nicht geteilt werden: {v}",
                 "利用者番号": "Benutzernummer",
                 "取得中… {v}": "Wird abgerufen… {v}",
+                "型番: {n}（{v}×{v}モジュール）": "Version: {n} ({v}×{v} Module)",
                 "市町村コードが一致しません": "Gemeindeschlüssel stimmt nicht überein",
                 "弱": "Schwach",
                 "強": "Stark",
@@ -2141,10 +2454,12 @@
                 "暗号化+署名": "Verschlüsselung + Signatur",
                 "暗色（Twin1=黒, Twin2=白）": "Dunkel (Twin1=schwarz, Twin2=weiß)",
                 "桃色": "Rosa",
+                "構成: QRツイン（白黒×白黒）": "Aufbau: QR Twin (schwarzweiß × schwarzweiß)",
                 "横向き": "Querformat",
                 "水色": "Cyan",
                 "現在位置を取得中です。しばらくしてからもう一度お試しください": "Standort wird ermittelt. Bitte versuchen Sie es gleich erneut.",
                 "生成時と同じ色設定を選択してください": "Wählen Sie dieselben Farbeinstellungen wie bei der Erzeugung",
+                "画像を保存": "Bild speichern",
                 "画像データ ID{v}": "Bilddaten ID{v}",
                 "画面をタップして再生を許可してください": "Zum Zulassen der Wiedergabe auf den Bildschirm tippen",
                 "登録": "Registrieren",
@@ -2157,7 +2472,9 @@
                 "第1LQR": "1. LQR",
                 "第1QR": "1. QR",
                 "第1QR データ": "Daten des 1. QR",
+                "第1QRに入れる文字を入力": "Text für den ersten QR eingeben",
                 "第1QRのデータ": "Daten des ersten QR",
+                "第1QRのデータを入力してください": "Bitte die Daten für den ersten QR eingeben",
                 "第1QRを探索中... (Hybrid)": "Suche nach dem 1. QR... (Hybrid)",
                 "第1QRを読取済み。パスワードA入力待ちです。": "1. QR gelesen. Warten auf Passwort A.",
                 "第1QRを読取済み。パスワード入力待ちです。": "1. QR gelesen. Warten auf Passworteingabe.",
@@ -2169,6 +2486,10 @@
                 "第2LQR（埋草領域）": "2. LQR (Füllbereich)",
                 "第2QR": "2. QR",
                 "第2QR データ": "Daten des 2. QR",
+                "第2QRに入れる文字を入力": "Text für den zweiten QR eingeben",
+                "第2QRのデータ": "Daten des zweiten QR",
+                "第2QRのデータを入力してください": "Bitte die Daten für den zweiten QR eingeben",
+                "第2QRの暗号化パスワード": "Verschlüsselungspasswort für den zweiten QR",
                 "第2QRを探索中...": "Suche nach dem 2. QR...",
                 "第2QRを探索中... (jsQR XOR)": "Suche nach dem 2. QR... (jsQR XOR)",
                 "第2QR取得中... QRをそのままかざし続けてください": "2. QR wird erfasst... Halten Sie den QR ruhig",
@@ -2184,8 +2505,10 @@
                 "第{n}LQR データ": "LQR-{n}-Daten",
                 "第{n}LQR データはWEB上（{k}）": "Daten des {n}. LQR liegen im Web ({k})",
                 "第{n}QR": "QR {n}",
+                "管理部が不正です: {v}": "Der Verwaltungsbereich ist ungültig: {v}",
                 "結合データ": "Zusammengeführte Daten",
                 "結果表示": "Ergebnis anzeigen",
+                "続けて作成": "Weiteren erstellen",
                 "縦向き": "Hochformat",
                 "署名データなし": "Keine Signaturdaten",
                 "署名解析エラー": "Fehler beim Auswerten der Signatur",
@@ -2197,6 +2520,7 @@
                 "認証できました": "Erfolgreich verifiziert",
                 "認証に失敗しました": "Verifizierung fehlgeschlagen",
                 "認証鍵": "Authentifizierungsschlüssel",
+                "誤り訂正レベル: M": "Fehlerkorrekturstufe: M",
                 "読み取りの有効期間が終了しました": "Der Gültigkeitszeitraum für das Lesen ist abgelaufen",
                 "読取デバッグ情報": "Scan-Debug-Info",
                 "読取デバッグ情報をコピーしました": "Scan-Debug-Info kopiert",
@@ -2211,7 +2535,7 @@
                 "読取端末IDで制限されたQRツインを読む場合に登録してください。": "Registrieren Sie sich nur, wenn Sie einen durch Lesegerät-ID beschränkten QR Twin lesen.",
                 "読取結果": "Scan-Ergebnis",
                 "赤": "Rot",
-                "通常": "Normal",
+                "通常": "Standard",
                 "通常の読み取りには登録は不要です。": "Für normales Scannen ist keine Registrierung nötig.",
                 "連続データ": "Fortlaufende Daten",
                 "連続データ（結合）": "Fortlaufende Daten (zusammengeführt)",
@@ -2249,7 +2573,13 @@
                 "QRコードがユーザ暗号化されています。パスワードAは以下です。": "यह QR कोड उपयोगकर्ता-एन्क्रिप्टेड है। पासवर्ड A नीचे है।",
                 "QRコードは暗号化されています": "यह QR कोड एन्क्रिप्टेड है",
                 "QRコード作成日時": "QR कोड निर्माण समय",
+                "QRツイン": "QR Twin",
+                "QRツインの管理部を扱う部品が読み込めていません": "QR Twin प्रबंधन घटक लोड नहीं हो सका",
+                "QRツイン作成": "QR Twin बनाएँ",
                 "QRツイン作成日時": "QR Twin निर्माण समय",
+                "QR作成": "QR बनाएँ",
+                "QR作成の部品（qrcode.js）がQRツインに対応していません": "QR निर्माण घटक (qrcode.js) QR Twin का समर्थन नहीं करता",
+                "QR作成の部品（qrcode.js）が読み込めていません": "QR निर्माण घटक (qrcode.js) लोड नहीं हो सका",
                 "WEBアドレスとして読めませんでした: {v}": "वेब पते के रूप में नहीं पढ़ा जा सका: {v}",
                 "WEBデータ": "वेब डेटा",
                 "WEBデータ（{k}）": "वेब डेटा ({k})",
@@ -2295,9 +2625,13 @@
                 "デバッグログ削除": "डीबग लॉग हटाएँ",
                 "データID {v}（ユーザID {a} ＋ 個別データID {b}）": "डेटा ID {v} (उपयोगकर्ता ID {a} + व्यक्तिगत डेटा ID {b})",
                 "データIDが読み取れませんでした": "डेटा ID नहीं पढ़ा जा सका",
+                "データ構成": "डेटा संरचना",
+                "データ構成: {v}": "डेटा संरचना: {v}",
+                "ノーマル": "सामान्य",
                 "パスワードA": "पासवर्ड A",
                 "パスワードAを入力": "पासवर्ड A दर्ज करें",
                 "パスワードF": "पासवर्ड F",
+                "パスワードを入力": "पासवर्ड दर्ज करें",
                 "パスワードを入力してください": "कृपया पासवर्ड दर्ज करें",
                 "パスワードを入力してスキャン再開": "पासवर्ड दर्ज करें और स्कैन जारी रखें",
                 "ファイルのパスワードFは以下です": "फ़ाइल पासवर्ड F नीचे है",
@@ -2312,12 +2646,20 @@
                 "下記は取得できた範囲の読取デバッグ情報です（蓄積済み）。": "नीचे अब तक प्राप्त स्कैन डीबग जानकारी है (सहेजी गई)।",
                 "不明": "अज्ञात",
                 "中": "मध्यम",
+                "作成する": "बनाएँ",
+                "作成できませんでした: {v}": "नहीं बनाया जा सका: {v}",
                 "作成日時": "निर्माण समय",
+                "作成日時: {v}": "निर्मित: {v}",
+                "作成日時が自動で付きます。読み取りにはこのパスワードが必要です。": "निर्माण तिथि और समय स्वतः जुड़ता है। पढ़ने के लिए यह पासवर्ड आवश्यक है।",
                 "例：手ブレが多い／反射あり／QRが小さい／ピントが合わない 等": "उदा. अधिक कंपन / चमक / QR छोटा / फोकस नहीं",
+                "保存できませんでした: {v}": "सहेजा नहीं जा सका: {v}",
                 "保存フレームから3/4領域化QRツインを復号中...": "सहेजे गए फ़्रेम से 3/4-क्षेत्र QR Twin डिकोड किया जा रहा है...",
                 "保存済み画像から第2QRを復号中...": "सहेजी गई छवि से दूसरा QR डिकोड किया जा रहा है...",
+                "共有": "साझा करें",
+                "共有できませんでした: {v}": "साझा नहीं किया जा सका: {v}",
                 "利用者番号": "उपयोगकर्ता संख्या",
                 "取得中… {v}": "प्राप्त किया जा रहा है… {v}",
+                "型番: {n}（{v}×{v}モジュール）": "संस्करण: {n} ({v}×{v} मॉड्यूल)",
                 "市町村コードが一致しません": "नगरपालिका कोड मेल नहीं खाता",
                 "弱": "कम",
                 "強": "उच्च",
@@ -2338,10 +2680,12 @@
                 "暗号化+署名": "एन्क्रिप्शन + हस्ताक्षर",
                 "暗色（Twin1=黒, Twin2=白）": "गहरा (Twin1=काला, Twin2=सफ़ेद)",
                 "桃色": "गुलाबी",
+                "構成: QRツイン（白黒×白黒）": "संरचना: QR Twin (श्वेत-श्याम × श्वेत-श्याम)",
                 "横向き": "क्षैतिज",
                 "水色": "आसमानी",
                 "現在位置を取得中です。しばらくしてからもう一度お試しください": "आपका स्थान प्राप्त किया जा रहा है। कृपया थोड़ी देर बाद पुनः प्रयास करें।",
                 "生成時と同じ色設定を選択してください": "जनरेट करते समय की गई रंग सेटिंग चुनें",
+                "画像を保存": "छवि सहेजें",
                 "画像データ ID{v}": "छवि डेटा ID{v}",
                 "画面をタップして再生を許可してください": "प्लेबैक की अनुमति देने के लिए स्क्रीन टैप करें",
                 "登録": "पंजीकरण",
@@ -2354,7 +2698,9 @@
                 "第1LQR": "पहला LQR",
                 "第1QR": "पहला QR",
                 "第1QR データ": "पहला QR डेटा",
+                "第1QRに入れる文字を入力": "पहले QR के लिए पाठ दर्ज करें",
                 "第1QRのデータ": "पहले QR का डेटा",
+                "第1QRのデータを入力してください": "कृपया पहले QR का डेटा दर्ज करें",
                 "第1QRを探索中... (Hybrid)": "पहला QR खोजा जा रहा है... (Hybrid)",
                 "第1QRを読取済み。パスワードA入力待ちです。": "पहला QR पढ़ा गया। पासवर्ड A की प्रतीक्षा है।",
                 "第1QRを読取済み。パスワード入力待ちです。": "पहला QR पढ़ा गया। पासवर्ड की प्रतीक्षा है।",
@@ -2366,6 +2712,10 @@
                 "第2LQR（埋草領域）": "दूसरा LQR (पैडिंग क्षेत्र)",
                 "第2QR": "दूसरा QR",
                 "第2QR データ": "दूसरा QR डेटा",
+                "第2QRに入れる文字を入力": "दूसरे QR के लिए पाठ दर्ज करें",
+                "第2QRのデータ": "दूसरे QR का डेटा",
+                "第2QRのデータを入力してください": "कृपया दूसरे QR का डेटा दर्ज करें",
+                "第2QRの暗号化パスワード": "दूसरे QR का एन्क्रिप्शन पासवर्ड",
                 "第2QRを探索中...": "दूसरा QR खोजा जा रहा है...",
                 "第2QRを探索中... (jsQR XOR)": "दूसरा QR खोजा जा रहा है... (jsQR XOR)",
                 "第2QR取得中... QRをそのままかざし続けてください": "दूसरा QR प्राप्त हो रहा है... QR को स्थिर रखें",
@@ -2381,8 +2731,10 @@
                 "第{n}LQR データ": "LQR {n} डेटा",
                 "第{n}LQR データはWEB上（{k}）": "{n}वें LQR का डेटा वेब पर है ({k})",
                 "第{n}QR": "QR {n}",
+                "管理部が不正です: {v}": "प्रबंधन क्षेत्र अमान्य है: {v}",
                 "結合データ": "संयुक्त डेटा",
                 "結果表示": "परिणाम दिखाएँ",
+                "続けて作成": "एक और बनाएँ",
                 "縦向き": "लंबवत",
                 "署名データなし": "कोई हस्ताक्षर डेटा नहीं",
                 "署名解析エラー": "हस्ताक्षर विश्लेषण त्रुटि",
@@ -2394,6 +2746,7 @@
                 "認証できました": "सत्यापित",
                 "認証に失敗しました": "सत्यापन विफल",
                 "認証鍵": "प्रमाणीकरण कुंजी",
+                "誤り訂正レベル: M": "त्रुटि सुधार स्तर: M",
                 "読み取りの有効期間が終了しました": "पढ़ने की वैधता अवधि समाप्त हो गई है",
                 "読取デバッグ情報": "स्कैन डीबग जानकारी",
                 "読取デバッグ情報をコピーしました": "स्कैन डीबग जानकारी कॉपी की गई",
@@ -2408,7 +2761,7 @@
                 "読取端末IDで制限されたQRツインを読む場合に登録してください。": "रीडर डिवाइस ID से प्रतिबंधित QR Twin पढ़ते समय ही पंजीकरण करें।",
                 "読取結果": "स्कैन परिणाम",
                 "赤": "लाल",
-                "通常": "सामान्य",
+                "通常": "मानक",
                 "通常の読み取りには登録は不要です。": "सामान्य स्कैनिंग के लिए पंजीकरण आवश्यक नहीं है।",
                 "連続データ": "निरंतर डेटा",
                 "連続データ（結合）": "निरंतर डेटा (संयुक्त)",
@@ -2446,7 +2799,13 @@
                 "QRコードがユーザ暗号化されています。パスワードAは以下です。": "Este código QR tem encriptação do utilizador. A palavra-passe A é a seguinte.",
                 "QRコードは暗号化されています": "Este código QR está encriptado",
                 "QRコード作成日時": "Código QR criado em",
+                "QRツイン": "QR Twin",
+                "QRツインの管理部を扱う部品が読み込めていません": "Não foi possível carregar o componente de gestão do QR Twin",
+                "QRツイン作成": "Criar QR Twin",
                 "QRツイン作成日時": "QR Twin criado em",
+                "QR作成": "Criar QR",
+                "QR作成の部品（qrcode.js）がQRツインに対応していません": "O componente de criação de QR (qrcode.js) não suporta QR Twin",
+                "QR作成の部品（qrcode.js）が読み込めていません": "Não foi possível carregar o componente de criação de QR (qrcode.js)",
                 "WEBアドレスとして読めませんでした: {v}": "Não foi possível ler como endereço web: {v}",
                 "WEBデータ": "Dados web",
                 "WEBデータ（{k}）": "Dados web ({k})",
@@ -2492,9 +2851,13 @@
                 "デバッグログ削除": "Apagar registo de depuração",
                 "データID {v}（ユーザID {a} ＋ 個別データID {b}）": "ID de dados {v} (ID de utilizador {a} + ID de dados individual {b})",
                 "データIDが読み取れませんでした": "Não foi possível ler o ID de dados",
+                "データ構成": "Estrutura de dados",
+                "データ構成: {v}": "Estrutura de dados: {v}",
+                "ノーマル": "Normal",
                 "パスワードA": "Palavra-passe A",
                 "パスワードAを入力": "Introduzir palavra-passe A",
                 "パスワードF": "Palavra-passe F",
+                "パスワードを入力": "Introduzir palavra-passe",
                 "パスワードを入力してください": "Introduza a palavra-passe",
                 "パスワードを入力してスキャン再開": "Introduza a palavra-passe e retome",
                 "ファイルのパスワードFは以下です": "A palavra-passe do ficheiro F é a seguinte",
@@ -2509,12 +2872,20 @@
                 "下記は取得できた範囲の読取デバッグ情報です（蓄積済み）。": "Abaixo, a informação de depuração obtida (já guardada).",
                 "不明": "Desconhecido",
                 "中": "Média",
+                "作成する": "Criar",
+                "作成できませんでした: {v}": "Não foi possível criar: {v}",
                 "作成日時": "Data de criação",
+                "作成日時: {v}": "Criado: {v}",
+                "作成日時が自動で付きます。読み取りにはこのパスワードが必要です。": "A data e hora de criação são adicionadas automaticamente. Esta palavra-passe é necessária para a leitura.",
                 "例：手ブレが多い／反射あり／QRが小さい／ピントが合わない 等": "ex.: muita trepidação / reflexos / QR pequeno / desfocado",
+                "保存できませんでした: {v}": "Não foi possível guardar: {v}",
                 "保存フレームから3/4領域化QRツインを復号中...": "A descodificar o QR Twin de 3/4 regiões a partir da imagem guardada...",
                 "保存済み画像から第2QRを復号中...": "A descodificar o 2.º QR a partir da imagem guardada...",
+                "共有": "Partilhar",
+                "共有できませんでした: {v}": "Não foi possível partilhar: {v}",
                 "利用者番号": "Número de utilizador",
                 "取得中… {v}": "A obter… {v}",
+                "型番: {n}（{v}×{v}モジュール）": "Versão: {n} ({v}×{v} módulos)",
                 "市町村コードが一致しません": "O código do município não corresponde",
                 "弱": "Baixa",
                 "強": "Alta",
@@ -2535,10 +2906,12 @@
                 "暗号化+署名": "Encriptação + assinatura",
                 "暗色（Twin1=黒, Twin2=白）": "Escuro (Twin1=preto, Twin2=branco)",
                 "桃色": "Rosa",
+                "構成: QRツイン（白黒×白黒）": "Estrutura: QR Twin (monocromático × monocromático)",
                 "横向き": "Horizontal",
                 "水色": "Ciano",
                 "現在位置を取得中です。しばらくしてからもう一度お試しください": "A obter a sua localização. Tente novamente em breve.",
                 "生成時と同じ色設定を選択してください": "Selecione as mesmas definições de cor usadas na geração",
+                "画像を保存": "Guardar imagem",
                 "画像データ ID{v}": "Dados de imagem ID{v}",
                 "画面をタップして再生を許可してください": "Toque no ecrã para permitir a reprodução",
                 "登録": "Registar",
@@ -2551,7 +2924,9 @@
                 "第1LQR": "1.º LQR",
                 "第1QR": "1.º QR",
                 "第1QR データ": "Dados do 1.º QR",
+                "第1QRに入れる文字を入力": "Introduza o texto do primeiro QR",
                 "第1QRのデータ": "Dados do primeiro QR",
+                "第1QRのデータを入力してください": "Introduza os dados do primeiro QR",
                 "第1QRを探索中... (Hybrid)": "A procurar o 1.º QR... (Hybrid)",
                 "第1QRを読取済み。パスワードA入力待ちです。": "1.º QR lido. A aguardar a palavra-passe A.",
                 "第1QRを読取済み。パスワード入力待ちです。": "1.º QR lido. A aguardar a palavra-passe.",
@@ -2563,6 +2938,10 @@
                 "第2LQR（埋草領域）": "2.º LQR (área de preenchimento)",
                 "第2QR": "2.º QR",
                 "第2QR データ": "Dados do 2.º QR",
+                "第2QRに入れる文字を入力": "Introduza o texto do segundo QR",
+                "第2QRのデータ": "Dados do segundo QR",
+                "第2QRのデータを入力してください": "Introduza os dados do segundo QR",
+                "第2QRの暗号化パスワード": "Palavra-passe de encriptação do segundo QR",
                 "第2QRを探索中...": "A procurar o 2.º QR...",
                 "第2QRを探索中... (jsQR XOR)": "A procurar o 2.º QR... (jsQR XOR)",
                 "第2QR取得中... QRをそのままかざし続けてください": "A obter o 2.º QR... Mantenha o QR fixo",
@@ -2578,8 +2957,10 @@
                 "第{n}LQR データ": "Dados do LQR {n}",
                 "第{n}LQR データはWEB上（{k}）": "Os dados do LQR {n} estão na web ({k})",
                 "第{n}QR": "QR {n}",
+                "管理部が不正です: {v}": "A área de gestão é inválida: {v}",
                 "結合データ": "Dados combinados",
                 "結果表示": "Mostrar resultado",
+                "続けて作成": "Criar outro",
                 "縦向き": "Vertical",
                 "署名データなし": "Sem dados de assinatura",
                 "署名解析エラー": "Erro de análise da assinatura",
@@ -2591,6 +2972,7 @@
                 "認証できました": "Autenticado com sucesso",
                 "認証に失敗しました": "A autenticação falhou",
                 "認証鍵": "Chave de autenticação",
+                "誤り訂正レベル: M": "Nível de correção de erros: M",
                 "読み取りの有効期間が終了しました": "O período de validade da leitura terminou",
                 "読取デバッグ情報": "Informação de depuração",
                 "読取デバッグ情報をコピーしました": "Informação de depuração copiada",
@@ -2605,7 +2987,7 @@
                 "読取端末IDで制限されたQRツインを読む場合に登録してください。": "Registe-se apenas para ler um QR Twin restrito por ID do dispositivo leitor.",
                 "読取結果": "Resultado da leitura",
                 "赤": "Vermelho",
-                "通常": "Normal",
+                "通常": "Padrão",
                 "通常の読み取りには登録は不要です。": "O registo não é necessário para leitura normal.",
                 "連続データ": "Dados contínuos",
                 "連続データ（結合）": "Dados contínuos (combinados)",
@@ -2712,6 +3094,7 @@
             // 数値を含む文言は訳し直しが効かないので、作り直す
             if (typeof updateDebugLogCountUI === 'function') updateDebugLogCountUI();
             if (typeof updateOrientationBtnUI === 'function') updateOrientationBtnUI();
+            if (typeof qrMakeRenderInfo === 'function') qrMakeRenderInfo();
         }
 
         function initUiLangSelector() {
@@ -14483,6 +14866,468 @@
 
             if (isScanning) requestAnimationFrame(scanLoop);
         }
+
+        /* ══════════════════════════════════════════════════════════════════
+           QRツイン作成（白黒×白黒 / 誤り訂正M固定 / ノーマル・ユーザ暗号化）
+
+           生成ソフト（QR Twin Generator Ver3.2）の同じ構成の経路をなぞる。
+           読取側と生成側で作りが食い違うと読めなくなるので、管理部の値・
+           暗号化マスクの作り方・重ね合わせの位置は、生成ソフトの実装に合わせている。
+
+           作らないもの（今回は条件なしのため）：
+             読取期限 / 読取端末ID / 読取位置 / 読取回数 / ユーザーID /
+             WEBデータID / 埋め草領域拡張 / 電子署名 / システム暗号化
+           ただしユーザ暗号化を選んだときは、作成日時だけ自動で付ける
+           （暗号鍵が「パスワード＋作成日時」から作られるため）。
+           ══════════════════════════════════════════════════════════════════ */
+
+        const QR_MAKE_ECC = 'M';            // 誤り訂正レベルは M で固定
+        const QR_MAKE_STRU = '0000';        // QRツイン 白黒＋白黒
+        const QR_MAKE_COLOR_MONO = 0x81;    // 使用色ビットマップ 10000001（黒＋白）
+        const QR_MAKE_QUIET = 1;            // 余白セル数（生成ソフトの既定値）
+        const QR_MAKE_PX = 520;             // 出力画像のおおよその一辺
+        const QR_MAKE_ECC_CODE = { L: 1, M: 0, Q: 3, H: 2 };   // qrcode.js 内部の並び
+
+        function qrMakeUtf8Bytes(str) {
+            return new TextEncoder().encode(String(str == null ? '' : str));
+        }
+
+        // password（またはバイト列）を種にして、必要バイト数ぶんの暗号化マスクを作る。
+        //   h0=sha256(種) / h1=sha256(h0) / … を連結する。生成ソフトと同じ手順。
+        function qrMakeMaskBytes(inputBytes, neededBytes) {
+            const out = new Uint8Array(neededBytes);
+            let filled = 0;
+            let h = sha256Bytes(inputBytes);
+            while (filled < neededBytes) {
+                const take = Math.min(32, neededBytes - filled);
+                out.set(h.subarray(0, take), filled);
+                filled += take;
+                if (filled >= neededBytes) break;
+                h = sha256Bytes(h);
+            }
+            return out;
+        }
+
+        // 作成日時32ビット
+        //   年4(0=2026年) 月4 日5 時5 分6 秒6 予備2
+        function qrMakeCreationDateTimeExt32(now) {
+            const y  = (now.getFullYear() - 2026) & 0xF;
+            const mo = (now.getMonth() + 1) & 0xF;
+            const d  = now.getDate() & 0x1F;
+            const h  = now.getHours() & 0x1F;
+            const mi = now.getMinutes() & 0x3F;
+            const se = now.getSeconds() & 0x3F;
+            return ((y << 28) | (mo << 24) | (d << 19) | (h << 14) | (mi << 8) | (se << 2)) >>> 0;
+        }
+
+        // 型式情報15ビット（BCH）。qrcode.js の QRUtil.getBCHTypeInfo と同じ。
+        function qrMakeBchTypeInfo(data) {
+            const G15 = 0x537;
+            const G15_MASK = 0x5412;
+            let d = data << 10;
+            let g15digit = 0, tmp = G15;
+            while (tmp) { g15digit++; tmp >>>= 1; }
+            for (;;) {
+                let dDigit = 0, dtmp = d;
+                while (dtmp) { dDigit++; dtmp >>>= 1; }
+                if (dDigit - g15digit < 0) break;
+                d ^= (G15 << (dDigit - g15digit));
+            }
+            return ((data << 10) | d) ^ G15_MASK;
+        }
+
+        // 第2QRの型式情報を書き換える（マスク番号を3ビット反転）。
+        //   素のQRリーダに読ませないための仕掛け。生成ソフトはユーザ暗号化でもこれを掛ける。
+        function qrMakeApplySystemEnc(mat, N, eccLevelCode) {
+            const b2 = mat[8][2] ? 1 : 0;
+            const b1 = mat[8][3] ? 1 : 0;
+            const b0 = mat[8][4] ? 1 : 0;
+            const originalMask = (((b2 ^ 1) << 2) | ((b1 ^ 0) << 1) | (b0 ^ 1));
+            const newMask = originalMask ^ 0b111;
+            const newBits = qrMakeBchTypeInfo((eccLevelCode << 3) | newMask);
+            for (let i = 0; i < 15; i++) {
+                const mod = ((newBits >> i) & 1) === 1;
+                if (i < 6)      mat[i][8] = mod;
+                else if (i < 8) mat[i + 1][8] = mod;
+                else            mat[N - 15 + i][8] = mod;
+                if (i < 8)      mat[8][N - i - 1] = mod;
+                else if (i < 9) mat[8][15 - i - 1 + 1] = mod;
+                else            mat[8][15 - i - 1] = mod;
+            }
+        }
+
+        // 管理部48ビットを組み立てる。
+        //   lqrNo … 0=第1LQR / 1=第2LQR
+        //   noExt … 拡張管理部を載せない側（第2QR）。フラグだけ立つと読取側が
+        //           存在しない32ビットを読んで以降が丸ごとずれるため、必ず0にする。
+        function qrMakeMgmt48(lqrNo, appEnc, noExt) {
+            const M = window.QRTwinMgmt48;
+            if (!M) throw new Error(t('QRツインの管理部を扱う部品が読み込めていません'));
+            const built = M.buildMgmt48({
+                qrNo: lqrNo,
+                systemStruBits: QR_MAKE_STRU,
+                colorSpec1: QR_MAKE_COLOR_MONO,
+                colorSpec2: QR_MAKE_COLOR_MONO,
+                // 2領域：000=公開＋公開（独立） / 010=公開＋暗号化
+                dataCompBits: appEnc ? '010' : '000',
+                dataPosition: 0,
+                webDataKind: 0,
+                sameDataFlag: 0,
+                sysEncFlag: 0,
+                appEncFlag: appEnc ? 1 : 0,
+                // 作成日時はユーザ暗号化のときだけ、しかも第1QRにだけ載せる
+                hasDateTime: (!noExt && appEnc) ? 1 : 0,
+                hasExpiry: 0, hasReaderId: 0, hasImageId: 0,
+                hasLocation: 0, hasMunicipality: 0,
+                readLimitBits: 0, userIdBit: 0, paddingExt: 0, reserved: 0
+            });
+            const v = M.validateMgmt(M.parseMgmt48(built.bits));
+            if (!v.ok) throw new Error(t('管理部が不正です: {v}', { v: v.errors.join(' / ') }));
+            return built.bits;
+        }
+
+        // 管理部付きQRを1枚作る（生成ソフトの makeManagedQR の必要な部分だけ）
+        function qrMakeManagedQR(ver, data, mgmtBits, opt) {
+            if (typeof window.qrcode !== 'function') {
+                throw new Error(t('QR作成の部品（qrcode.js）が読み込めていません'));
+            }
+            const qr = window.qrcode(ver, QR_MAKE_ECC);
+            if (typeof qr.setManagementBits !== 'function') {
+                throw new Error(t('QR作成の部品（qrcode.js）がQRツインに対応していません'));
+            }
+            if (typeof qr.setMaskPattern === 'function') qr.setMaskPattern(null);   // 自動
+            qr.stringToBytes = window.qrcode.stringToBytesFuncs['UTF-8'];
+            qr.setManagementBits(mgmtBits);
+
+            // 拡張管理部（今回入り得るのは作成日時32ビットだけ）
+            if (opt && opt.extBlocks && opt.extBlocks.length > 0) {
+                qr.setManagementExtBlocks(opt.extBlocks);
+                if (typeof qr.setManagementExt32 === 'function') qr.setManagementExt32(null);
+            } else {
+                if (typeof qr.setManagementExtBlocks === 'function') qr.setManagementExtBlocks(null);
+                if (typeof qr.setManagementExt32 === 'function') qr.setManagementExt32(null);
+            }
+            // 使わない拡張はすべて明示的に外す（前回の値が残らないように）
+            if (typeof qr.setLocationExt48 === 'function') qr.setLocationExt48(null);
+            if (typeof qr.setMunicipalityExt24 === 'function') qr.setMunicipalityExt24(null);
+            if (typeof qr.setPaddingExtBytes === 'function') qr.setPaddingExtBytes(null);
+            if (typeof qr.setReverseDataMode === 'function') qr.setReverseDataMode(false);
+            if (typeof qr.setWebDataIdExt32 === 'function') qr.setWebDataIdExt32(null);
+            if (typeof qr.setUserIdExt32 === 'function') qr.setUserIdExt32(null);
+            if (typeof qr.setQrTwinUniqueId8 === 'function') qr.setQrTwinUniqueId8(null);
+
+            qr.addData(data, 'Byte');
+
+            // ユーザ暗号化：データ部だけをXORし、XOR後のデータから誤り訂正符号を作り直す。
+            //   こうすると読取側は鍵が無くてもRS訂正まではでき、鍵を得たらXORを解くだけで済む。
+            if (opt && opt.applyXor) {
+                const dataBytes = qr.getDataCodeCount();
+                const pwBytes = qrMakeUtf8Bytes(opt.appEncPassword);
+                const dt = opt.creationDateTimeExt32;
+                const combined = new Uint8Array(pwBytes.length + 4);
+                combined.set(pwBytes);
+                combined.set([(dt >>> 24) & 0xFF, (dt >>> 16) & 0xFF, (dt >>> 8) & 0xFF, dt & 0xFF], pwBytes.length);
+                qr.setXorMaskBytes(qrMakeMaskBytes(combined, dataBytes));
+            } else if (typeof qr.setXorMaskBytes === 'function') {
+                qr.setXorMaskBytes(null);
+            }
+
+            qr.make();
+            const N = qr.getModuleCount();
+            const mat = Array.from({ length: N }, (_, r) =>
+                Array.from({ length: N }, (_, c) => qr.isDark(r, c)));
+            return { qr, N, mat, typeNumber: qr.typeNumber || ver };
+        }
+
+        function qrMakeRotate180(mat, N) {
+            const out = Array.from({ length: N }, () => Array(N).fill(false));
+            for (let r = 0; r < N; r++) {
+                for (let c = 0; c < N; c++) out[r][c] = mat[N - 1 - r][N - 1 - c];
+            }
+            return out;
+        }
+
+        // 重なり部のセル。ひし形にすることで、半セルずれた相手のセルとかみ合う。
+        function qrMakeFillDiamond(ctx, x, y, size) {
+            const half = size / 2;
+            const cx = x + half, cy = y + half, d = half + 0.5;
+            ctx.beginPath();
+            ctx.moveTo(cx, cy - d);
+            ctx.lineTo(cx + d, cy);
+            ctx.lineTo(cx, cy + d);
+            ctx.lineTo(cx - d, cy);
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        // 位置検出パターンの左上（キャンバス座標）。rotated は180°回した側。
+        function qrMakeFinderPositions(baseX, baseY, cellPx, quiet, N, rotated) {
+            const cells = rotated
+                ? [{ r: 0, c: N - 7 }, { r: N - 7, c: 0 }, { r: N - 7, c: N - 7 }]
+                : [{ r: 0, c: 0 }, { r: 0, c: N - 7 }, { r: N - 7, c: 0 }];
+            return cells.map(fp => ({
+                x: baseX + (quiet + fp.c) * cellPx,
+                y: baseY + (quiet + fp.r) * cellPx
+            }));
+        }
+
+        // 位置検出パターン7×7と、その外側1セルの分離パターンを白黒で塗り直す。
+        function qrMakeForceFinders(ctx, positions, cellPx) {
+            positions.forEach(pos => {
+                ctx.fillStyle = '#FFFFFF';
+                ctx.fillRect(pos.x - cellPx, pos.y - cellPx, 9 * cellPx, 9 * cellPx);
+                for (let r = 0; r < 7; r++) {
+                    for (let c = 0; c < 7; c++) {
+                        const isDark = r === 0 || r === 6 || c === 0 || c === 6
+                            || (r >= 2 && r <= 4 && c >= 2 && c <= 4);
+                        ctx.fillStyle = isDark ? '#000000' : '#FFFFFF';
+                        ctx.fillRect(pos.x + c * cellPx, pos.y + r * cellPx, cellPx, cellPx);
+                    }
+                }
+            });
+        }
+
+        /** 2枚を斜め8.5セルずらして重ねる（QRツインの並べ方）。
+         *  白セルは描かないので、重なった部分はどちらかが黒なら黒になる。
+         *  重なり部だけはひし形で描き、相手のセルの中心を潰さないようにする。 */
+        function qrMakeDrawTwin(canvas, mat1, mat2rot, N, pxSize, quiet) {
+            const shiftCells = 8.5;
+            const total2 = (N + quiet * 2) * 2;
+            const shift2 = shiftCells * 2;
+            const virtualTotal2 = total2 + shift2;
+
+            let halfPx = Math.floor(pxSize / virtualTotal2);
+            if (halfPx < 1) halfPx = 1;
+            const cellPx = halfPx * 2;
+            const shiftPx = shift2 * halfPx;
+            const side = virtualTotal2 * halfPx;
+
+            canvas.width = side;
+            canvas.height = side;
+            const ctx = canvas.getContext('2d');
+            ctx.imageSmoothingEnabled = false;
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillRect(0, 0, side, side);
+
+            // 重なり部の判定（生成ソフトと同じ範囲。0始まりに直してある）
+            const inOverlap1 = (r, c) => (r >= 8 && c >= 8);
+            const inOverlap2 = (r, c) => (r <= N - 9 && c <= N - 9);
+
+            // 第2QR（180°回転）を先に、続けて第1QRを重ねる
+            ctx.fillStyle = '#000000';
+            for (let r = 0; r < N; r++) {
+                for (let c = 0; c < N; c++) {
+                    if (!mat2rot[r][c]) continue;
+                    const px = (c + quiet) * cellPx + shiftPx;
+                    const py = (r + quiet) * cellPx + shiftPx;
+                    if (inOverlap2(r, c)) qrMakeFillDiamond(ctx, px, py, cellPx);
+                    else ctx.fillRect(px, py, cellPx, cellPx);
+                }
+            }
+            ctx.fillStyle = '#000000';
+            for (let r = 0; r < N; r++) {
+                for (let c = 0; c < N; c++) {
+                    if (!mat1[r][c]) continue;
+                    const px = (c + quiet) * cellPx;
+                    const py = (r + quiet) * cellPx;
+                    if (inOverlap1(r, c)) qrMakeFillDiamond(ctx, px, py, cellPx);
+                    else ctx.fillRect(px, py, cellPx, cellPx);
+                }
+            }
+
+            // 位置検出パターンを白黒に戻す（第2QR→第1QRの順。生成ソフトと同じ）
+            qrMakeForceFinders(ctx, qrMakeFinderPositions(shiftPx, shiftPx, cellPx, quiet, N, true), cellPx);
+            qrMakeForceFinders(ctx, qrMakeFinderPositions(0, 0, cellPx, quiet, N, false), cellPx);
+
+            return { N, cellPx, side };
+        }
+
+        /** 入力から QRツイン画像を作る。 */
+        function qrMakeBuildTwin(data1, data2, appEnc, password) {
+            const now = new Date();
+            const creationDateTimeExt32 = appEnc ? qrMakeCreationDateTimeExt32(now) : null;
+            const extBlocks = appEnc ? [creationDateTimeExt32] : [];
+
+            const mgmt1 = qrMakeMgmt48(0, appEnc, false);
+            const mgmt2 = qrMakeMgmt48(1, appEnc, true);
+
+            const q1Opt = extBlocks.length ? { extBlocks } : {};
+            const q2Opt = appEnc
+                ? { applyXor: true, appEncPassword: password, creationDateTimeExt32 }
+                : {};
+
+            // 型番は自動（0）で一度試し、大きい方に揃えて作り直す。
+            // 2枚の型番が違うと重ね合わせの格子が合わない。
+            const t1 = qrMakeManagedQR(0, data1, mgmt1, q1Opt);
+            const t2 = qrMakeManagedQR(0, data2, mgmt2, q2Opt);
+            const unified = Math.max(t1.typeNumber, t2.typeNumber);
+
+            const q1 = qrMakeManagedQR(unified, data1, mgmt1, q1Opt);
+            const q2 = qrMakeManagedQR(unified, data2, mgmt2, q2Opt);
+
+            // ユーザ暗号化のときは第2QRの型式情報も書き換える（生成ソフトと同じ）
+            if (appEnc) qrMakeApplySystemEnc(q2.mat, q2.N, QR_MAKE_ECC_CODE[QR_MAKE_ECC]);
+
+            const canvas = document.getElementById('qrMakeCanvas');
+            const geo = qrMakeDrawTwin(canvas, q1.mat, qrMakeRotate180(q2.mat, q2.N),
+                                       q1.N, QR_MAKE_PX, QR_MAKE_QUIET);
+            return { canvas, typeNumber: unified, N: q1.N, side: geo.side, now, appEnc };
+        }
+
+        // ── 画面まわり ──
+        function qrMakeIsAppEnc() {
+            const el = document.getElementById('qrMakeModeAppEnc');
+            return !!(el && el.checked);
+        }
+
+        function qrMakeSyncMode() {
+            const card = document.getElementById('qrMakePasswordCard');
+            if (card) card.style.display = qrMakeIsAppEnc() ? '' : 'none';
+        }
+
+        function qrMakeShowError(msg) {
+            const el = document.getElementById('qrMakeError');
+            if (!el) return;
+            if (!msg) { el.style.display = 'none'; el.innerText = ''; return; }
+            el.innerText = msg;
+            el.style.display = '';
+        }
+
+        function qrMakeOpen() {
+            qrMakeShowError('');
+            document.getElementById('qrMakeForm').style.display = '';
+            document.getElementById('qrMakeResult').style.display = 'none';
+            qrMakeSyncMode();
+            document.getElementById('qrMakeScreen').style.display = 'flex';
+        }
+
+        function qrMakeClose() {
+            document.getElementById('qrMakeScreen').style.display = 'none';
+        }
+
+        function qrMakeRun() {
+            qrMakeShowError('');
+            const data1 = document.getElementById('qrMakeData1').value;
+            const data2 = document.getElementById('qrMakeData2').value;
+            const appEnc = qrMakeIsAppEnc();
+            const password = document.getElementById('qrMakePassword').value;
+
+            if (!data1.trim()) { qrMakeShowError(t('第1QRのデータを入力してください')); return; }
+            if (!data2.trim()) { qrMakeShowError(t('第2QRのデータを入力してください')); return; }
+            if (appEnc && !password) { qrMakeShowError(t('パスワードを入力してください')); return; }
+
+            try {
+                qrMakeLastResult = qrMakeBuildTwin(data1, data2, appEnc, password);
+                qrMakeRenderInfo();
+                document.getElementById('qrMakeForm').style.display = 'none';
+                document.getElementById('qrMakeResult').style.display = '';
+            } catch (e) {
+                qrMakeShowError(t('作成できませんでした: {v}', { v: (e && e.message) ? e.message : String(e) }));
+            }
+        }
+
+        // 直前に作ったものの控え。数値を含む説明文は訳し直しが効かないので、
+        // 言語を切り替えたときはここから作り直す。
+        let qrMakeLastResult = null;
+
+        function qrMakeRenderInfo() {
+            const info = document.getElementById('qrMakeInfo');
+            const r = qrMakeLastResult;
+            if (!info || !r) return;
+            const lines = [
+                t('構成: QRツイン（白黒×白黒）'),
+                t('データ構成: {v}', { v: r.appEnc ? t('ユーザ暗号化') : t('ノーマル') }),
+                t('誤り訂正レベル: M'),
+                t('型番: {n}（{v}×{v}モジュール）', { n: r.typeNumber, v: r.N })
+            ];
+            if (r.appEnc) lines.push(t('作成日時: {v}', { v: qrMakeFormatDateTime(r.now) }));
+            info.innerText = lines.join('\n');
+        }
+
+        function qrMakeFormatDateTime(d) {
+            const z = (n) => String(n).padStart(2, '0');
+            return d.getFullYear() + '-' + z(d.getMonth() + 1) + '-' + z(d.getDate())
+                + ' ' + z(d.getHours()) + ':' + z(d.getMinutes()) + ':' + z(d.getSeconds());
+        }
+
+        function qrMakeFileName() {
+            const d = new Date();
+            const z = (n) => String(n).padStart(2, '0');
+            return 'qrtwin_' + d.getFullYear() + z(d.getMonth() + 1) + z(d.getDate())
+                + '_' + z(d.getHours()) + z(d.getMinutes()) + z(d.getSeconds()) + '.png';
+        }
+
+        function qrMakeCanvasToBlob() {
+            return new Promise((resolve, reject) => {
+                const canvas = document.getElementById('qrMakeCanvas');
+                if (!canvas) { reject(new Error('canvas なし')); return; }
+                canvas.toBlob((blob) => {
+                    if (blob) resolve(blob);
+                    else reject(new Error('画像に変換できませんでした'));
+                }, 'image/png');
+            });
+        }
+
+        // 端末の共有画面（写真を送るときと同じもの）を開く。
+        // 使えない端末では画像の保存に切り替える。
+        async function qrMakeShare() {
+            try {
+                const blob = await qrMakeCanvasToBlob();
+                const file = new File([blob], qrMakeFileName(), { type: 'image/png' });
+                if (navigator.canShare && navigator.canShare({ files: [file] }) && navigator.share) {
+                    await navigator.share({ files: [file], title: t('QRツイン') });
+                    return;
+                }
+                qrMakeShowSaveFallback(blob);
+            } catch (e) {
+                // 利用者が共有をやめた場合は何も出さない
+                if (e && e.name === 'AbortError') return;
+                qrMakeShowError(t('共有できませんでした: {v}', { v: (e && e.message) ? e.message : String(e) }));
+            }
+        }
+
+        async function qrMakeSave() {
+            try {
+                qrMakeShowSaveFallback(await qrMakeCanvasToBlob());
+            } catch (e) {
+                qrMakeShowError(t('保存できませんでした: {v}', { v: (e && e.message) ? e.message : String(e) }));
+            }
+        }
+
+        function qrMakeShowSaveFallback(blob) {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = qrMakeFileName();
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(url), 10000);
+        }
+
+        function qrMakeAgain() {
+            qrMakeLastResult = null;
+            document.getElementById('qrMakeResult').style.display = 'none';
+            document.getElementById('qrMakeForm').style.display = '';
+            qrMakeShowError('');
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            const on = (id, fn) => {
+                const el = document.getElementById(id);
+                if (el) el.addEventListener('click', fn);
+            };
+            on('qrMakeBtn', qrMakeOpen);
+            on('qrMakeCloseBtn', qrMakeClose);
+            on('qrMakeRunBtn', qrMakeRun);
+            on('qrMakeShareBtn', qrMakeShare);
+            on('qrMakeSaveBtn', qrMakeSave);
+            on('qrMakeAgainBtn', qrMakeAgain);
+            const n = document.getElementById('qrMakeModeNormal');
+            const a = document.getElementById('qrMakeModeAppEnc');
+            if (n) n.addEventListener('change', qrMakeSyncMode);
+            if (a) a.addEventListener('change', qrMakeSyncMode);
+        });
     </script>
 </body>
 </html>
