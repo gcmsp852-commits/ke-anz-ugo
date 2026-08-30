@@ -106,7 +106,7 @@
 </head>
 <body>
 
-    <div class="header" id="headerText">QR Twin Reader9</div>
+    <div class="header" id="headerText">QR Twin Reader3</div>
     
     <div class="camera-container">
         <video id="camera" playsinline autoplay muted></video>
@@ -8080,6 +8080,8 @@
         };
         // Blob URL は使い終わったら開放する
         let webDataObjectUrl = null;
+        // 前の結果の非同期処理が、制限画面や次の結果へ書き戻すのを防ぐ。
+        let resultDisplayVersion = 0;
 
         /** いま読取ソフトが置かれている場所（絶対URL） */
         function webDataLocalBase() {
@@ -8136,6 +8138,7 @@
         }
 
         function resetWebDataCard() {
+            resultDisplayVersion++;
             const card = document.getElementById('webDataCard');
             if (!card) return;
             card.style.display = 'none';
@@ -8144,7 +8147,11 @@
                 if (!e) continue;
                 e.style.display = 'none';
                 if (e.tagName === 'A') { e.href = '#'; e.textContent = '-'; }
-                else { e.removeAttribute('src'); if (e.load) { try { e.load(); } catch (err) {} } }
+                else {
+                    e.onerror = e.onload = e.onloadeddata = null;
+                    e.removeAttribute('src');
+                    if (e.load) { try { e.load(); } catch (err) {} }
+                }
             }
             const st = document.getElementById('webDataStatus');
             if (st) st.innerText = '-';
@@ -8161,16 +8168,21 @@
         }
 
         /** メディア要素に候補URLを順に入れ、読めたところで止める */
-        function loadWebMediaByCandidates(elId, candidates) {
+        function loadWebMediaByCandidates(elId, candidates, displayVersion = resultDisplayVersion) {
             return new Promise((resolve) => {
                 const el = document.getElementById(elId);
                 if (!el || !candidates.length) { resolve(null); return; }
                 let i = 0;
                 const tryNext = () => {
+                    if (displayVersion !== resultDisplayVersion) { resolve(null); return; }
                     if (i >= candidates.length) { el.onerror = null; el.style.display = 'none'; resolve(null); return; }
                     const cand = candidates[i++];
                     el.onerror = tryNext;
-                    el.onloadeddata = el.onload = () => { el.onerror = null; resolve(cand); };
+                    el.onloadeddata = el.onload = () => {
+                        if (displayVersion !== resultDisplayVersion) { resolve(null); return; }
+                        el.onerror = null;
+                        resolve(cand);
+                    };
                     el.style.display = '';
                     el.src = cand.url;
                     if (el.load) { try { el.load(); } catch (e) {} }
@@ -8208,9 +8220,9 @@
          * WEBデータIDから中身を取ってきて結果画面へ出す。
          * @param {object} info getWebDataInfo の戻り
          */
-        async function resolveWebData(info) {
+        async function resolveWebData(info, displayVersion = resultDisplayVersion) {
             const M = window.QRTwinMgmt48;
-            if (!info || !info.parts || !M) return;
+            if (!info || !info.parts || !M || displayVersion !== resultDisplayVersion) return;
             const kindValue = info.kindValue;
             if (!WEB_DATA_EXTS[kindValue]) return;   // 種別未定義
 
@@ -8232,12 +8244,14 @@
             // 暗号化なしの画像・動画・音声は、要素へ直接読ませる（取得と再生を一度で済ませる）
             if (!encrypted && kindValue >= 3) {   // 暗号化なしのメディアは要素へ直接読ませる
                 const elId = kindValue === 3 ? 'webDataImage' : (kindValue === 4 ? 'webDataVideo' : 'webDataAudio');
-                const hit = await loadWebMediaByCandidates(elId, candidates);
+                const hit = await loadWebMediaByCandidates(elId, candidates, displayVersion);
+                if (displayVersion !== resultDisplayVersion) return;
                 showWebDataStatus(label, hit ? hit.url : webDataNotFoundText(cands));
                 return;
             }
 
             const got = await fetchWebDataBytes(candidates);
+            if (displayVersion !== resultDisplayVersion) return;
             if (!got) {
                 showWebDataStatus(label, webDataNotFoundText(cands));
                 return;
@@ -8250,6 +8264,7 @@
                 const raw = base64TextToBytes(new TextDecoder().decode(bytes));
                 if (!raw) { showWebDataStatus(label, t('Base64として読めませんでした: {v}', { v: got.cand.url })); return; }
                 const dec = await decryptWebPayload(raw, info.mgmtInfo, appPasswordText);
+                if (displayVersion !== resultDisplayVersion) return;
                 bytes = dec.bytes;
                 decLabel = t('（復号して表示）');
             }
@@ -8339,6 +8354,7 @@
 
         // ★ 通常のQRコードの読取結果を即座に表示する（第2QRを待たない）
         function showPlainQrResult(text) {
+            resetWebDataCard();
             if (navigator.vibrate) navigator.vibrate([40, 30, 40]);
             isScanning = false;
             isProcessing = false;
@@ -8366,6 +8382,7 @@
             // 世の中の通常QRには拡張管理部が無いので、ユーザーIDカードは常に閉じる
             renderUserIdCard('userIdCard', 'userIdText', null);
 
+            document.getElementById('scanStatsCard').style.display = '';
             renderScanDebugStats();
             appendCurrentTrialToLog();
             document.getElementById('resultScreen').style.display = 'flex';
@@ -8397,18 +8414,33 @@
 
             if (errorMessage) {
                 // ★ エラーメッセージ表示（読取期限切れ・読取端末ID不一致・読取位置不一致・読取回数超過 等）
-                //   第1QRは公開データ（生成側は常に applyXor:false）なので、
-                //   読取制限を満たさない場合でも内容を表示する。伏せるのは第2QR（暗号化部）のみ。
+                // 制限時は公開の第1QRだけを表示し、後続領域や付帯情報は表示しない。
+                isProcessing = false;
                 normalSection.style.display = '';
                 dsSection.style.display = 'none';
                 resultTitle.innerText = errorMessage;
                 resultTitle.style.color = '#F44336';
-                renderResultText('resText1', extractQ1Text(q1ForError) || extractQ1Text(firstQR));
+                renderResultText('resText1', extractQ1Text(q1ForError ?? firstQR));
                 renderResultText('resText2', null, t('読取制限により非表示'));
+                if (card2El) card2El.style.display = 'none';
+                renderResultText('dsResContent', null);
+                renderResultText('dsVerifyText', null);
+                renderResultText('dsAuthKey', null);
+                renderImageDataId('dsImageContainer', 'dsImage', null, false);
+                renderCreationDateCard('dsCreationDateCard', 'dsCreationDateTime', null);
+                renderUserIdCard('userIdCard', 'userIdText', null);
+                for (const id of ['newColorResultScreen', 'colorResultScreen', 'passwordScreen',
+                    'sysEncScreen', 'doubleEncScreen', 'scanStatsCard']) {
+                    const el = document.getElementById(id);
+                    if (el) el.style.display = 'none';
+                }
                 const label1El = document.getElementById('normalResultLabel1');
                 const label2El = document.getElementById('normalResultLabel2');
                 if (label1El) label1El.innerText = t('第1QR');
                 if (label2El) label2El.innerText = t('第2QR');
+                appendCurrentTrialToLog();
+                document.getElementById('resultScreen').style.display = 'flex';
+                return;
             } else if (digitalSignResult) {
                 recordReadCountIfNeeded(firstQR);
                 // 電子署名モード結果表示
@@ -8483,12 +8515,14 @@
 
                 // ★Ver3.1：埋め草領域拡張。収容元のLQRは本文の前半しか持たないので、
                 //   相手の埋め草にある余りを復号して繋ぎ直す（表示は非同期で差し替える）。
-                resolvePaddingExt(firstQR, secondQR).then(ext => {
-                    if (!ext) return;
+                const displayVersion = resultDisplayVersion;
+                const resultQ1 = firstQR, resultQ2 = secondQR;
+                resolvePaddingExt(resultQ1, resultQ2).then(ext => {
+                    if (!ext || displayVersion !== resultDisplayVersion) return;
                     const el = (ext.sourceLqr === 1) ? label1El : label2El;
                     const textId = (ext.sourceLqr === 1) ? 'resText1' : 'resText2';
                     const base = (ext.sourceLqr === 1)
-                        ? (firstQR ? firstQR.text : '') : (secondQR ? secondQR.text : '');
+                        ? (resultQ1 ? resultQ1.text : '') : (resultQ2 ? resultQ2.text : '');
                     renderResultText(textId, (base || '') + ext.text);
                     if (el) el.innerText = t('第{a}LQR（第{b}LQRの埋め草から復元）', { a: ext.sourceLqr, b: ext.holderLqr });
                 }).catch(() => {});
@@ -8533,6 +8567,7 @@
             renderUserIdCard('userIdCard', 'userIdText',
                 firstQR && firstQR.userIdExt32 !== undefined ? firstQR.userIdExt32 : null);
 
+            document.getElementById('scanStatsCard').style.display = '';
             renderScanDebugStats();
             appendCurrentTrialToLog(); // ★ この試行の計測を蓄積ログへ追記（完了時1回）
             document.getElementById('resultScreen').style.display = 'flex';
@@ -8581,6 +8616,7 @@
         }
 
         function restartScan() {
+            resetWebDataCard();
             // ★ 統一モード: 電子署名は自動判別なので、再スキャンは常に統一(normal)から開始
             if (scanMode === 'digital_sign') scanMode = 'normal';
             { const _ts = document.getElementById('timeoutScreen'); if (_ts) _ts.style.display = 'none'; }
@@ -8889,6 +8925,11 @@
                 if (!colorScanResult[key] && nextResult[key]) {
                     colorScanResult[key] = nextResult[key];
                 }
+            }
+            for (const key of ['_q1ForDisplay', '_q1Meta', '_expiryChecked', '_expiryFailed',
+                '_readerIdFailed', '_locationFailed', '_municipalityFailed',
+                '_pendingMunicipalityCheck', '_readCountFailed', '_readCountMessage']) {
+                if (nextResult[key] !== undefined) colorScanResult[key] = nextResult[key];
             }
             return colorScanResult;
         }
@@ -9953,7 +9994,7 @@
             }
 
             if (detectedBBox) result.bbox = detectedBBox;
-            if (!result.qr1 && !result.qr2 && !result.qr3 && !result.qr4) {
+            if (!result.qr1 && !result.qr2 && !result.qr3 && !result.qr4 && !result._q1ForDisplay) {
                 return detectedBBox ? { bbox: detectedBBox } : null;
             }
 
@@ -9961,6 +10002,7 @@
         }
 
         function showColorResult(data) {
+            resetWebDataCard();
             recordReadCountIfNeeded(data && data._q1Meta);
             renderResultText('colorRes1', data.qr1 || null, '(not found)');
             renderResultText('colorRes2', data.qr2 || null, '(not found)');
@@ -12888,6 +12930,7 @@
         // ★Ver3.1：領域テキストは配列で受ける（regionTexts[n] = 第n領域のテキスト）。
         //   従来は q2/q3/q4 の3引数固定で、5領域(4色＋8色)・6領域(8色＋8色)を表示できなかった。
         function showNewColorResult(q1Text, regionTexts, mgmtInfo, q1Meta = null) {
+            resetWebDataCard();
             const txt = (n) => (regionTexts && regionTexts[n]) ? regionTexts[n] : '';
             recordReadCountIfNeeded(q1Meta);
             if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
@@ -13392,6 +13435,15 @@
                             isScanning = false; isProcessing = false;
                             showResultScreen(null, await resolveMunicipalityFailMessage(), colorScanResult._q1ForDisplay);
                             return;
+                        }
+                        if (colorScanResult._pendingMunicipalityCheck != null) {
+                            const muniMatch = await checkMunicipality(colorScanResult._pendingMunicipalityCheck);
+                            delete colorScanResult._pendingMunicipalityCheck;
+                            if (!muniMatch) {
+                                isScanning = false; isProcessing = false;
+                                showResultScreen(null, await resolveMunicipalityFailMessage(), colorScanResult._q1ForDisplay);
+                                return;
+                            }
                         }
                         if (colorScanResult._readCountFailed) {
                             isScanning = false; isProcessing = false;
