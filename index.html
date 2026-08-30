@@ -78,21 +78,16 @@
         .qr-data-card .text { font-size: 1.1rem; color: #fff; word-break: break-all; font-family: monospace; }
         .qr-data-card .text a { color: #64B5F6; text-decoration: underline; }
         .qr-data-card .mgmt { font-size: 0.8rem; color: #4CAF50; font-family: monospace; margin-top: 4px; }
-        #resultScreen { justify-content: flex-start; overflow-y: auto; }
-        #resultScreen .overlay-box { max-height: calc(100dvh - 40px); overflow-y: auto; max-width: 520px; }
-        #scanStatsText { max-height: 34dvh; overflow-y: auto; overflow-x: auto; font-size: 0.82rem; line-height: 1.35; word-break: normal; white-space: pre; }
-        #newColorScanStatsText {
-            height: 12rem;
-            max-height: 34dvh;
+        #resultScreen, #colorResultScreen, #newColorResultScreen { height: 100dvh; justify-content: center; overflow-y: auto; }
+        #resultScreen .overlay-box, #colorResultScreen .overlay-box, #newColorResultScreen .overlay-box {
+            box-sizing: border-box;
+            max-height: 100%;
+            min-height: 0;
             overflow-y: auto;
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
-            overscroll-behavior: contain;
-            font-size: 0.82rem;
-            line-height: 1.35;
-            word-break: normal;
-            white-space: pre-wrap;
+            flex: 0 1 auto;
         }
+        #resultScreen .overlay-box > *, #colorResultScreen .overlay-box > *, #newColorResultScreen .overlay-box > * { flex-shrink: 0; }
+        #resultScreen .overlay-box { max-width: 520px; }
         #newColorResultActions {
             display: flex;
             flex-direction: column;
@@ -106,7 +101,7 @@
 </head>
 <body>
 
-    <div class="header" id="headerText">QR Twin Reader11</div>
+    <div class="header" id="headerText">QR Twin Reader3</div>
     
     <div class="camera-container">
         <video id="camera" playsinline autoplay muted></video>
@@ -137,12 +132,6 @@
                 <button class="btn" id="colorEncModeBtn" style="background-color:#00897B; display:none;">カラー符号化モード</button>
                 <button class="btn" id="qrMakeBtn" style="background-color:#6A1B9A;">QR作成</button>
                 <button class="btn secondary" id="logoutBtn" style="margin-top:10px; font-size:0.9rem;">端末情報を変更</button>
-                <!-- ★ 読取デバッグログ（蓄積）操作 -->
-                <div style="margin-top:12px; display:flex; gap:8px; justify-content:center; flex-wrap:wrap;">
-                    <button class="btn secondary" style="font-size:0.85rem; padding:8px 12px;" onclick="copyAllDebugLog()">デバッグログコピー</button>
-                    <button class="btn secondary" style="font-size:0.85rem; padding:8px 12px; background-color:#7f1d1d; border-color:#a33;" onclick="confirmClearDebugLog()">デバッグログ削除</button>
-                </div>
-                <div id="debugLogCountLabel" style="margin-top:6px; font-size:0.8rem; color:#aaa;">蓄積ログ 0 件</div>
             </div>
         </div>
     </div>
@@ -225,35 +214,6 @@
             <button class="btn" onclick="doLogin()">登録</button>
             <button class="btn secondary" onclick="closeTerminalScreen()">閉じる</button>
             <button class="btn secondary" style="background-color:#7f1d1d; border-color:#a33; font-size:0.85rem;" onclick="doLogout()">登録を解除</button>
-        </div>
-    </div>
-
-    <!-- 20秒タイムアウト画面（未完了でも取得済み情報を表示・蓄積＋コメント） -->
-    <div class="overlay-screen" id="timeoutScreen" style="display:none;">
-        <div class="overlay-box" style="gap:14px;">
-            <h2 style="color:#FF9800;">⏱ 20秒経過：読み取りを終了しました</h2>
-            <p>20秒以内に読み取りが完了しませんでした。<br>下記は取得できた範囲の読取デバッグ情報です（蓄積済み）。</p>
-            <div class="qr-data-card" style="border-color:#FF9800;">
-                <label style="color:#FF9800;">読取デバッグ情報（20秒タイムアウト）</label>
-                <div class="text" id="timeoutStatsText" data-no-i18n style="text-align:left; white-space:pre-wrap; max-height:30dvh; overflow:auto;">-</div>
-                <button class="btn secondary" style="font-size:0.85rem; padding:8px 12px; margin-top:8px;" onclick="copyScanDebugInfo()">この試行をコピー</button>
-            </div>
-            <div class="qr-data-card">
-                <label>コメント（この20秒タイムアウトQRツインについて）</label>
-                <textarea id="timeoutCommentInput" rows="3" style="width:100%; box-sizing:border-box; padding:10px; font-size:1rem; border-radius:6px; border:1px solid #444; background:#000; color:#fff;" placeholder="例：手ブレが多い／反射あり／QRが小さい／ピントが合わない 等"></textarea>
-                <button class="btn" style="margin-top:8px;" onclick="saveTimeoutComment()">コメントを蓄積して閉じる</button>
-            </div>
-            <button class="btn secondary" onclick="restartScan()">コメントなしでもう一度スキャン</button>
-        </div>
-    </div>
-
-    <!-- デバッグログ削除 確認モーダル -->
-    <div class="overlay-screen" id="debugClearModal" style="display:none;">
-        <div class="overlay-box">
-            <h2 style="color:#ff5252;">デバッグログを消去します</h2>
-            <p>蓄積した読取デバッグ情報を全て消去します。<br>よろしいですか？</p>
-            <button class="btn" style="background-color:#7f1d1d; border-color:#a33;" onclick="doClearDebugLog()">はい、消去する</button>
-            <button class="btn secondary" onclick="cancelClearDebugLog()">いいえ</button>
         </div>
     </div>
 
@@ -357,11 +317,6 @@
                 <label style="color:#BA68C8;">ユーザーID</label>
                 <div class="text" id="userIdText" data-no-i18n>-</div>
             </div>
-            <div class="qr-data-card" id="scanStatsCard" style="border-color:#FF1744; margin-top:12px;">
-                <label style="color:#FF1744;">読取デバッグ情報</label>
-                <div class="text" id="scanStatsText" data-no-i18n style="text-align:left; white-space:pre-wrap;">-</div>
-                <button class="btn secondary" style="font-size:0.85rem; padding:8px 12px; margin-top:8px;" onclick="copyScanDebugInfo()">コピー</button>
-            </div>
             <button class="btn" onclick="restartScan()">もう一度スキャン</button>
         </div>
     </div>
@@ -394,7 +349,7 @@
 
     <!-- カラー符号化: 結果画面 -->
     <div class="overlay-screen" id="colorResultScreen">
-        <div class="overlay-box" style="gap: 12px; max-height: 90vh; overflow-y: auto;">
+        <div class="overlay-box" style="gap: 12px;">
             <h2 style="color:#00897B;">カラー符号化 読取り結果</h2>
             <div class="qr-data-card" style="border-color: #00E676;">
                 <label style="color:#00E676;">第1QR データ</label>
@@ -419,7 +374,7 @@
 
     <!-- 新カラー符号化: 結果画面 -->
     <div class="overlay-screen" id="newColorResultScreen">
-        <div class="overlay-box" style="gap: 12px; max-height: 90vh; overflow-y: auto;">
+        <div class="overlay-box" style="gap: 12px;">
             <h2 id="newColorResultTitle" style="color:#6A1B9A;">新カラー符号化 読取り結果</h2>
             <div id="newColorRegionInfo" style="font-size:0.85rem; color:#aaa; text-align:center;"></div>
             <div id="newColorRes1Card" class="qr-data-card" style="border-color: #00E676;">
@@ -474,11 +429,6 @@
             <div id="newColorResultActions">
                 <button class="btn" style="background-color:#6A1B9A;" onclick="restartScan()">もう一度スキャン</button>
                 <button class="btn secondary" onclick="goBack()">モード切替</button>
-            </div>
-            <div class="qr-data-card" id="newColorScanStatsCard" style="border-color:#FF1744; margin-top:12px;">
-                <label style="color:#FF1744;">読取デバッグ情報</label>
-                <div class="text" id="newColorScanStatsText" data-no-i18n style="text-align:left; white-space:pre-wrap;">-</div>
-                <button class="btn secondary" style="font-size:0.85rem; padding:8px 12px; margin-top:8px;" onclick="copyScanDebugInfo()">コピー</button>
             </div>
         </div>
     </div>
@@ -3139,7 +3089,6 @@
             if (sel && sel.value !== code) sel.value = code;   // 外から切り替えたときも選択欄を合わせる
             applyUiLanguage();
             // 数値を含む文言は訳し直しが効かないので、作り直す
-            if (typeof updateDebugLogCountUI === 'function') updateDebugLogCountUI();
             if (typeof updateOrientationBtnUI === 'function') updateOrientationBtnUI();
             if (typeof qrMakeRenderInfo === 'function') qrMakeRenderInfo();
         }
@@ -3828,11 +3777,6 @@
             if (typeof statusText !== 'undefined' && statusText) statusText.innerText = t('読取向きを「{v}」にしました', { v: t(orientationLabel(readOrientationManual)) });
         }
 
-        // ★ 20秒タイムアウト：QRツイン読取開始から20秒で打ち切り、取得済み情報でデバッグ表示＆蓄積。
-        const SCAN_TIMEOUT_MS = 20000;
-        let twinReadStartedAt = 0;     // 読取開始時刻(perf ms)。resetScanDebugStatsで0化→scanLoop初回で設定。
-        let lastTimeoutTrialId = null; // 直近タイムアウト試行の蓄積レコードID（コメント追記用）
-
         // ============================================================
         //  ★ QRツイン識別ロジック（第2QR の判定強化）
         //  ZXing 版と同一の「テキスト差 OR 中心座標距離」による判定。
@@ -4324,7 +4268,6 @@
             };
             jsQrCropDebugRects = [];
             stage1BdQ2Candidate = null;
-            twinReadStartedAt = 0; // ★ 新しい読取開始：20秒タイマをリセット（scanLoop初回で再設定）
         }
 
         function getScanDebugStats() {
@@ -5029,11 +4972,6 @@
             return lines.join('\n');
         }
 
-        function renderScanDebugStats(targetId = 'scanStatsText') {
-            const el = document.getElementById(targetId);
-            if (el) el.innerText = formatScanDebugStats();
-        }
-
         function fallbackCopyText(text) {
             const ta = document.createElement('textarea');
             ta.value = text || '';
@@ -5073,219 +5011,8 @@
             return false;
         }
 
-        async function copyScanDebugInfo() {
-            const text = formatScanDebugStats();
-            try {
-                const ok = await copyTextToClipboard(text);
-                statusText.innerText = ok ? '\u8aad\u53d6\u30c7\u30d0\u30c3\u30b0\u60c5\u5831\u3092\u30b3\u30d4\u30fc\u3057\u307e\u3057\u305f' : '\u30af\u30ea\u30c3\u30d7\u30dc\u30fc\u30c9\u306b\u30b3\u30d4\u30fc\u3067\u304d\u307e\u305b\u3093\u3067\u3057\u305f';
-                return;
-                statusText.innerText = ok ? t('読取デバッグ情報をコピーしました') : t('クリップボードにコピーできませんでした');
-                return;
-                statusText.innerText = t('読取デバッグ情報をコピーしました');
-            } catch (e) {
-                statusText.innerText = t('コピーに失敗しました');
-            }
-        }
-
-        // ============================================================
-        //  ★ 読取デバッグ情報の「蓄積」（試行をまたいで保持）
-        //    localStorage に試行毎のレコードを追記。トップ画面の
-        //    「デバッグログコピー」で全件コピー、「デバッグログ削除」で消去。
-        // ============================================================
-        const DEBUG_LOG_KEY = 'QR_DEBUG_LOG_V1';
-        const DEBUG_LOG_MAX = 500; // 上限件数（古いものから破棄）
-
-        function loadDebugLog() {
-            try { const s = localStorage.getItem(DEBUG_LOG_KEY); return s ? (JSON.parse(s) || []) : []; }
-            catch (e) { return []; }
-        }
-        function saveDebugLog(arr) {
-            try { localStorage.setItem(DEBUG_LOG_KEY, JSON.stringify(arr)); } catch (e) { /* quota等は無視 */ }
-        }
-        function getDebugLogCount() { return loadDebugLog().length; }
-
-        function updateDebugLogCountUI() {
-            const el = document.getElementById('debugLogCountLabel');
-            if (el) el.textContent = t('蓄積ログ {n} 件', { n: getDebugLogCount() });
-        }
-
-        // 現在の読取（1試行）の計測を、蓄積ログへ1レコード追記する。
-        // 完了画面表示 or 20秒タイムアウト時に呼ぶ。二重追記は _logged フラグで防止。
-        // 返り値: 追記したレコードのID（スキップ時は null）。
-        function appendCurrentTrialToLog() {
-            const stats = getScanDebugStats();
-            if (!stats || stats._logged) return null;
-            const isTimeout = !!stats._timeout;
-            // 一度も検出処理を回していない試行は記録しない（ただしタイムアウトは常に記録）
-            if (!isTimeout && (!stats.frames || !stats.frames.total)) { stats._logged = true; return null; }
-            stats._logged = true;
-            const log = loadDebugLog();
-            const lastId = log.length ? (log[log.length - 1].id || log.length) : 0;
-            const id = lastId + 1;
-            const ts = new Date();
-            const tsStr = ts.getFullYear() + '-' + String(ts.getMonth() + 1).padStart(2, '0') + '-' + String(ts.getDate()).padStart(2, '0')
-                + ' ' + String(ts.getHours()).padStart(2, '0') + ':' + String(ts.getMinutes()).padStart(2, '0') + ':' + String(ts.getSeconds()).padStart(2, '0');
-            const orient = stats.readOrientation || 'portrait';
-            const outcome = isTimeout ? '[20秒タイムアウト/未完了]' : '[完了]';
-            const header = '========== 試行 #' + id + ' / ' + tsStr + ' / mode=' + scanMode + ' / 向き=' + orientationLabel(orient) + ' / ' + outcome + ' ==========';
-            const rec = {
-                id,
-                ts: ts.toISOString(),
-                mode: scanMode,
-                orientation: orient,
-                timeout: isTimeout,
-                secondSuccessMs: (stats.secondSuccessAt != null) ? Math.round(stats.secondSuccessAt) : null,
-                firstSuccessMs: (stats.firstSuccessAt != null) ? Math.round(stats.firstSuccessAt) : null,
-                framesTotal: (stats.frames ? stats.frames.total : 0),
-                q1Type: (stats.qrMeta && stats.qrMeta['0']) ? stats.qrMeta['0'].type : null,
-                q2Type: (stats.qrMeta && stats.qrMeta['1']) ? stats.qrMeta['1'].type : null,
-                q1Fp: (stats.qrMeta && stats.qrMeta['0'] && stats.qrMeta['0'].pattern) ? stats.qrMeta['0'].pattern.fp : null,
-                q2Fp: (stats.qrMeta && stats.qrMeta['1'] && stats.qrMeta['1'].pattern) ? stats.qrMeta['1'].pattern.fp : null,
-                prelocateWin: stats.prelocateWin || null,
-                comment: null,
-                text: header + '\n' + formatScanDebugStats()
-            };
-            log.push(rec);
-            while (log.length > DEBUG_LOG_MAX) log.shift();
-            saveDebugLog(log);
-            updateDebugLogCountUI();
-            return id;
-        }
-
-        // 蓄積済みレコードにユーザコメントを追記する（IDで特定）。
-        function appendCommentToLogRecord(id, comment, isTimeout) {
-            if (id == null || !comment) return false;
-            const log = loadDebugLog();
-            const rec = log.find(r => r && r.id === id);
-            if (!rec) return false;
-            const tag = isTimeout ? '【ユーザコメント / 対象=20秒タイムアウトQRツイン】' : '【ユーザコメント】';
-            rec.comment = comment;
-            rec.commentForTimeout = !!isTimeout;
-            rec.text = rec.text + '\n' + tag + ' ' + comment;
-            saveDebugLog(log);
-            return true;
-        }
-
-        // 蓄積ログ全体を1テキストへ（先頭に集計サマリ）
-        function formatAccumulatedDebugLog() {
-            const log = loadDebugLog();
-            if (!log.length) return 'デバッグログは空です。';
-            const lines = [];
-            lines.push('■ 読取デバッグログ（蓄積）');
-            lines.push('件数: ' + log.length + ' / 出力: ' + new Date().toISOString());
-            // 簡易集計：種別×平均第2QR確定ms、配置fp×平均ms（遅い配置の発見用）
-            const agg = {};
-            for (const r of log) {
-                const key = (r.q2Type || r.q1Type || '不明');
-                if (!agg[key]) agg[key] = { n: 0, sum: 0 };
-                if (r.secondSuccessMs != null) { agg[key].n++; agg[key].sum += r.secondSuccessMs; }
-            }
-            lines.push('— 種別別の平均 第2QR確定ms —');
-            Object.keys(agg).forEach(k => {
-                const a = agg[k];
-                lines.push('  ' + k + ': n=' + a.n + ' avg=' + (a.n ? Math.round(a.sum / a.n) : '-') + 'ms');
-            });
-            // 読取向き別（手動選択）× 第2QR確定ms（縦横差の確認用）
-            const oAgg = {};
-            for (const r of log) {
-                const ok = orientationLabel(r.orientation || 'portrait');
-                if (!oAgg[ok]) oAgg[ok] = { n: 0, sum: 0, cnt: 0 };
-                oAgg[ok].cnt++;
-                if (r.secondSuccessMs != null) { oAgg[ok].n++; oAgg[ok].sum += r.secondSuccessMs; }
-            }
-            lines.push('— 読取向き別(手動選択)の平均 第2QR確定ms —');
-            Object.keys(oAgg).forEach(k => {
-                const a = oAgg[k];
-                lines.push('  ' + k + ': 試行' + a.cnt + '件 / n=' + a.n + ' avg=' + (a.n ? Math.round(a.sum / a.n) : '-') + 'ms');
-            });
-            // 配置fp別（遅い配置パターン検出）
-            const fpAgg = {};
-            for (const r of log) {
-                const fp = r.q2Fp || r.q1Fp; if (!fp) continue;
-                if (!fpAgg[fp]) fpAgg[fp] = { n: 0, sum: 0 };
-                if (r.secondSuccessMs != null) { fpAgg[fp].n++; fpAgg[fp].sum += r.secondSuccessMs; }
-            }
-            const fpRows = Object.keys(fpAgg).map(fp => ({ fp, n: fpAgg[fp].n, avg: fpAgg[fp].n ? Math.round(fpAgg[fp].sum / fpAgg[fp].n) : null }))
-                .filter(x => x.avg != null).sort((a, b) => b.avg - a.avg);
-            if (fpRows.length) {
-                lines.push('— 配置fp別の平均 第2QR確定ms（遅い順 上位20） —');
-                fpRows.slice(0, 20).forEach(x => lines.push('  fp=' + x.fp + ': n=' + x.n + ' avg=' + x.avg + 'ms'));
-            }
-            lines.push('========================================');
-            lines.push('');
-            for (const rec of log) { lines.push(rec.text); lines.push(''); }
-            return lines.join('\n');
-        }
-
-        async function copyAllDebugLog() {
-            const text = formatAccumulatedDebugLog();
-            try {
-                const ok = await copyTextToClipboard(text);
-                if (typeof statusText !== 'undefined' && statusText) {
-                    statusText.innerText = ok
-                        ? '\u30c7\u30d0\u30c3\u30b0\u30ed\u30b0(' + getDebugLogCount() + '\u4ef6)\u3092\u30b3\u30d4\u30fc\u3057\u307e\u3057\u305f'
-                        : '\u30af\u30ea\u30c3\u30d7\u30dc\u30fc\u30c9\u306b\u30b3\u30d4\u30fc\u3067\u304d\u307e\u305b\u3093\u3067\u3057\u305f';
-                }
-                return;
-                if (typeof statusText !== 'undefined' && statusText) statusText.innerText = t('デバッグログ({n}件)をコピーしました', { n: getDebugLogCount() });
-            } catch (e) {
-                if (typeof statusText !== 'undefined' && statusText) statusText.innerText = t('コピーに失敗しました');
-            }
-        }
-
-        // 削除（誤操作防止のため確認モーダルを経由）
-        function confirmClearDebugLog() {
-            const m = document.getElementById('debugClearModal');
-            if (m) m.style.display = 'flex';
-        }
-        function cancelClearDebugLog() {
-            const m = document.getElementById('debugClearModal');
-            if (m) m.style.display = 'none';
-        }
-        function doClearDebugLog() {
-            saveDebugLog([]);
-            updateDebugLogCountUI();
-            cancelClearDebugLog();
-            if (typeof statusText !== 'undefined' && statusText) statusText.innerText = t('デバッグログを消去しました');
-        }
-
-        // ★ 20秒タイムアウト：読み取りを打ち切り、取得済み情報でデバッグ表示＆蓄積し、コメント欄を出す。
-        function handleScanTimeout() {
-            if (!isScanning) return;
-            twinReadStartedAt = 0;
-            isScanning = false;
-            isProcessing = false;
-            const stats = getScanDebugStats();
-            stats._timeout = true;
-            markScanCompleted('timeout');
-            const text = formatScanDebugStats();
-            const el = document.getElementById('timeoutStatsText');
-            if (el) el.innerText = text;
-            // 完了読取と同様に蓄積（コメントは後から追記）
-            lastTimeoutTrialId = appendCurrentTrialToLog();
-            const ci = document.getElementById('timeoutCommentInput');
-            if (ci) ci.value = '';
-            try { document.getElementById('cameraControls').style.display = 'none'; } catch (e) {}
-            const scr = document.getElementById('timeoutScreen');
-            if (scr) scr.style.display = 'flex';
-            if (typeof statusText !== 'undefined' && statusText) statusText.innerText = t('20秒経過：読み取りを終了しました');
-        }
-
-        // 起動時に蓄積件数ラベルを初期化
-        try { updateDebugLogCountUI(); } catch (e) { /* DOM未準備なら load で */ }
-        window.addEventListener('load', function () { try { updateDebugLogCountUI(); } catch (e) {} });
-
-        // タイムアウト画面でコメントを保存（蓄積レコードへ追記）して閉じる。
-        function saveTimeoutComment() {
-            const ci = document.getElementById('timeoutCommentInput');
-            const comment = ci ? (ci.value || '').trim() : '';
-            if (comment) {
-                const ok = appendCommentToLogRecord(lastTimeoutTrialId, comment, true);
-                if (typeof statusText !== 'undefined' && statusText) statusText.innerText = ok ? t('コメントを蓄積しました') : t('コメント追記に失敗しました');
-            }
-            lastTimeoutTrialId = null;
-            restartScan();
-        }
+        // 蓄積ログは保存しない。以前の版で保存したデバッグログだけを消去する。
+        try { localStorage.removeItem('QR_DEBUG_LOG_V1'); } catch (e) { /* 保存領域が使えなくても読取を続行 */ }
 
         function drawJsQrCropDebugRects() {
             const now = Date.now();
@@ -7162,7 +6889,6 @@
             if (navigator.vibrate) navigator.vibrate([40, 30, 40]);
             
             isScanning = false;
-            twinReadStartedAt = 0; // ★ 中間画面（入力待ち等）では20秒タイマを止め、再開時に再計測
             scanStage = 2;
             statusText.innerText = waitingText || t('第1QRを読取済み。パスワード入力待ちです。');
             document.getElementById('qr1PreviewText').innerText = previewText != null
@@ -7176,7 +6902,6 @@
             if (navigator.vibrate) navigator.vibrate([40, 30, 40]);
             
             isScanning = false;
-            twinReadStartedAt = 0; // ★ 中間画面（入力待ち等）では20秒タイマを止め、再開時に再計測
             scanStage = 2;
             statusText.innerText = t('第1QRを読取済み。第2QRのシステム復号へ進みます。');
             document.getElementById('sysEncQr1Text').innerText = firstQR.text;
@@ -7187,7 +6912,6 @@
             if (navigator.vibrate) navigator.vibrate([40, 30, 40]);
             
             isScanning = false;
-            twinReadStartedAt = 0; // ★ 中間画面（入力待ち等）では20秒タイマを止め、再開時に再計測
             scanStage = 2;
             statusText.innerText = t('第1QRを読取済み。パスワードA入力待ちです。');
             document.getElementById('doubleEncQr1Text').innerText = firstQR.text;
@@ -8359,7 +8083,6 @@
             isScanning = false;
             isProcessing = false;
             markScanCompleted('completed');
-            twinReadStartedAt = 0;
 
             try { document.getElementById('cameraControls').style.display = 'none'; } catch (e) {}
 
@@ -8382,9 +8105,6 @@
             // 世の中の通常QRには拡張管理部が無いので、ユーザーIDカードは常に閉じる
             renderUserIdCard('userIdCard', 'userIdText', null);
 
-            document.getElementById('scanStatsCard').style.display = '';
-            renderScanDebugStats();
-            appendCurrentTrialToLog();
             document.getElementById('resultScreen').style.display = 'flex';
         }
 
@@ -8396,7 +8116,6 @@
             const q2MissingForOutcome = !(statsForOutcome.successByQr && statsForOutcome.successByQr['1'])
                 && !statsForOutcome.q2NotRequiredReason;
             markScanCompleted(q2MissingForOutcome ? 'incomplete' : 'completed');
-            twinReadStartedAt = 0; // ★ 完了：20秒タイマ停止
 
             const normalSection = document.getElementById('normalResultSection');
             const dsSection = document.getElementById('digitalSignResultSection');
@@ -8430,7 +8149,7 @@
                 renderCreationDateCard('dsCreationDateCard', 'dsCreationDateTime', null);
                 renderUserIdCard('userIdCard', 'userIdText', null);
                 for (const id of ['newColorResultScreen', 'colorResultScreen', 'passwordScreen',
-                    'sysEncScreen', 'doubleEncScreen', 'scanStatsCard']) {
+                    'sysEncScreen', 'doubleEncScreen']) {
                     const el = document.getElementById(id);
                     if (el) el.style.display = 'none';
                 }
@@ -8438,7 +8157,6 @@
                 const label2El = document.getElementById('normalResultLabel2');
                 if (label1El) label1El.innerText = t('第1QR');
                 if (label2El) label2El.innerText = t('第2QR');
-                appendCurrentTrialToLog();
                 document.getElementById('resultScreen').style.display = 'flex';
                 return;
             } else if (digitalSignResult) {
@@ -8567,9 +8285,6 @@
             renderUserIdCard('userIdCard', 'userIdText',
                 firstQR && firstQR.userIdExt32 !== undefined ? firstQR.userIdExt32 : null);
 
-            document.getElementById('scanStatsCard').style.display = '';
-            renderScanDebugStats();
-            appendCurrentTrialToLog(); // ★ この試行の計測を蓄積ログへ追記（完了時1回）
             document.getElementById('resultScreen').style.display = 'flex';
         }
 
@@ -8619,7 +8334,6 @@
             resetWebDataCard();
             // ★ 統一モード: 電子署名は自動判別なので、再スキャンは常に統一(normal)から開始
             if (scanMode === 'digital_sign') scanMode = 'normal';
-            { const _ts = document.getElementById('timeoutScreen'); if (_ts) _ts.style.display = 'none'; }
             document.getElementById('resultScreen').style.display = 'none';
             document.getElementById('passwordScreen').style.display = 'none';
             document.getElementById('sysEncScreen').style.display = 'none';
@@ -13121,9 +12835,6 @@
             }
 
             markScanCompleted(isNewColorStageComplete(qRegionMeta, mgmtInfo) ? 'completed' : 'incomplete');
-            twinReadStartedAt = 0;
-            renderScanDebugStats('newColorScanStatsText');
-            appendCurrentTrialToLog();
 
             document.getElementById('newColorResultScreen').style.display = 'flex';
         }
@@ -13131,13 +12842,6 @@
         // --- Main Scan Loop ---
         async function scanLoop() {
             if (!isScanning) return;
-
-            // ★ 20秒タイムアウト判定（読取開始からの経過）。中間画面中は isScanning=false なので進まない。
-            if (!twinReadStartedAt) twinReadStartedAt = nowPerf();
-            if (nowPerf() - twinReadStartedAt >= SCAN_TIMEOUT_MS) {
-                handleScanTimeout();
-                return;
-            }
 
             if (video.videoWidth && overlayCanvas.width !== video.videoWidth) {
                 overlayCanvas.width = video.videoWidth;
