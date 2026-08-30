@@ -106,7 +106,7 @@
 </head>
 <body>
 
-    <div class="header" id="headerText">QR Twin Reader8</div>
+    <div class="header" id="headerText">QR Twin Reader3</div>
     
     <div class="camera-container">
         <video id="camera" playsinline autoplay muted></video>
@@ -183,6 +183,7 @@
                 <div class="qr-data-card" id="qrMakePasswordCard" style="margin-bottom:12px; display:none;">
                     <label for="qrMakePassword">第2QRの暗号化パスワード</label>
                     <input type="text" id="qrMakePassword" placeholder="パスワードを入力"
+                           inputmode="text" autocapitalize="none" autocorrect="off" spellcheck="false"
                            style="width:100%; box-sizing:border-box; font-size:1rem;" />
                     <div style="font-size:0.78rem; color:#888; margin-top:6px;">
                         作成日時が自動で付きます。読み取りにはこのパスワードが必要です。
@@ -200,6 +201,8 @@
                 <div id="qrMakeInfo" style="font-size:0.82rem; color:#aaa; margin-top:8px; text-align:left;"></div>
                 <button class="btn" id="qrMakeShareBtn" style="width:100%; margin-top:12px; background-color:#2E7D32;">共有</button>
                 <button class="btn secondary" id="qrMakeSaveBtn" style="width:100%; margin-top:8px;">画像を保存</button>
+                <button class="btn secondary" id="qrMakeCopyBtn" style="width:100%; margin-top:8px;">画像をコピー</button>
+                <div id="qrMakeCopyStatus" role="status" aria-live="polite" style="display:none; font-size:0.85rem; margin-top:8px; overflow-wrap:anywhere;"></div>
                 <button class="btn secondary" id="qrMakeAgainBtn" style="width:100%; margin-top:8px;">続けて作成</button>
             </div>
 
@@ -521,6 +524,10 @@
         ];
         const UI_TEXT = {
             "en": {
+                "画像をコピー": "Copy Image",
+                "画像をコピーしました": "Image copied",
+                "画像をコピーできませんでした。「画像を保存」または「共有」をご利用ください。": "Could not copy the image. Please use Save Image or Share.",
+                "パスワードは半角英数字のみ入力できます。": "The password may contain only letters A-Z, a-z and digits 0-9.",
                 "(未読取)": "(not read)",
                 "20秒以内に読み取りが完了しませんでした。": "Scanning did not complete within 20 seconds.",
                 "20秒経過：読み取りを終了しました": "20 seconds elapsed: scanning ended",
@@ -747,6 +754,10 @@
                 "🔒 システム暗号化": "🔒 System encryption",
             },
             "zh-Hant": {
+                "画像をコピー": "複製圖片",
+                "画像をコピーしました": "已複製圖片",
+                "画像をコピーできませんでした。「画像を保存」または「共有」をご利用ください。": "無法複製圖片。請使用儲存圖片或分享功能。",
+                "パスワードは半角英数字のみ入力できます。": "密碼僅能輸入半形英文字母（A-Z、a-z）及數字（0-9）。",
                 "(未読取)": "（未讀取）",
                 "20秒以内に読み取りが完了しませんでした。": "未能在20秒內完成讀取。",
                 "20秒経過：読み取りを終了しました": "已過20秒：讀取結束",
@@ -973,6 +984,10 @@
                 "🔒 システム暗号化": "🔒 系統加密",
             },
             "zh-Hans": {
+                "画像をコピー": "复制图片",
+                "画像をコピーしました": "已复制图片",
+                "画像をコピーできませんでした。「画像を保存」または「共有」をご利用ください。": "无法复制图片。请使用保存图片或分享功能。",
+                "パスワードは半角英数字のみ入力できます。": "密码仅能输入半角英文字母（A-Z、a-z）及数字（0-9）。",
                 "(未読取)": "（未读取）",
                 "20秒以内に読み取りが完了しませんでした。": "未能在20秒内完成读取。",
                 "20秒経過：読み取りを終了しました": "已过20秒：读取结束",
@@ -1199,6 +1214,10 @@
                 "🔒 システム暗号化": "🔒 系统加密",
             },
             "ko": {
+                "画像をコピー": "이미지 복사",
+                "画像をコピーしました": "이미지를 복사했습니다",
+                "画像をコピーできませんでした。「画像を保存」または「共有」をご利用ください。": "이미지를 복사하지 못했습니다. 이미지 저장 또는 공유 기능을 이용해 주세요.",
+                "パスワードは半角英数字のみ入力できます。": "비밀번호는 반각 영문자(A-Z, a-z)와 숫자(0-9)만 입력할 수 있습니다.",
                 "(未読取)": "(미판독)",
                 "20秒以内に読み取りが完了しませんでした。": "20초 이내에 판독이 완료되지 않았습니다.",
                 "20秒経過：読み取りを終了しました": "20초 경과: 판독을 종료했습니다",
@@ -1425,6 +1444,10 @@
                 "🔒 システム暗号化": "🔒 시스템 암호화",
             },
             "id": {
+                "画像をコピー": "Salin Gambar",
+                "画像をコピーしました": "Gambar disalin",
+                "画像をコピーできませんでした。「画像を保存」または「共有」をご利用ください。": "Tidak dapat menyalin gambar. Gunakan Simpan Gambar atau Bagikan.",
+                "パスワードは半角英数字のみ入力できます。": "Kata sandi hanya boleh berisi huruf A-Z, a-z dan angka 0-9.",
                 "(未読取)": "(belum dibaca)",
                 "20秒以内に読み取りが完了しませんでした。": "Pemindaian tidak selesai dalam 20 detik.",
                 "20秒経過：読み取りを終了しました": "20 detik berlalu: pemindaian dihentikan",
@@ -1651,6 +1674,10 @@
                 "🔒 システム暗号化": "🔒 Enkripsi sistem",
             },
             "vi": {
+                "画像をコピー": "Sao chép ảnh",
+                "画像をコピーしました": "Đã sao chép ảnh",
+                "画像をコピーできませんでした。「画像を保存」または「共有」をご利用ください。": "Không thể sao chép ảnh. Vui lòng sử dụng Lưu ảnh hoặc Chia sẻ.",
+                "パスワードは半角英数字のみ入力できます。": "Mật khẩu chỉ được chứa các chữ cái A-Z, a-z và chữ số 0-9.",
                 "(未読取)": "(chưa đọc)",
                 "20秒以内に読み取りが完了しませんでした。": "Không hoàn tất quét trong vòng 20 giây.",
                 "20秒経過：読み取りを終了しました": "Đã qua 20 giây: kết thúc quét",
@@ -1877,6 +1904,10 @@
                 "🔒 システム暗号化": "🔒 Mã hóa hệ thống",
             },
             "es": {
+                "画像をコピー": "Copiar imagen",
+                "画像をコピーしました": "Imagen copiada",
+                "画像をコピーできませんでした。「画像を保存」または「共有」をご利用ください。": "No se pudo copiar la imagen. Utilice Guardar imagen o Compartir.",
+                "パスワードは半角英数字のみ入力できます。": "La contraseña solo puede contener letras A-Z, a-z y dígitos 0-9.",
                 "(未読取)": "(sin leer)",
                 "20秒以内に読み取りが完了しませんでした。": "La lectura no se completó en 20 segundos.",
                 "20秒経過：読み取りを終了しました": "20 segundos transcurridos: lectura finalizada",
@@ -2103,6 +2134,10 @@
                 "🔒 システム暗号化": "🔒 Cifrado del sistema",
             },
             "fr": {
+                "画像をコピー": "Copier l’image",
+                "画像をコピーしました": "Image copiée",
+                "画像をコピーできませんでした。「画像を保存」または「共有」をご利用ください。": "Impossible de copier l’image. Utilisez Enregistrer l’image ou Partager.",
+                "パスワードは半角英数字のみ入力できます。": "Le mot de passe ne peut contenir que les lettres A-Z, a-z et les chiffres 0-9.",
                 "(未読取)": "(non lu)",
                 "20秒以内に読み取りが完了しませんでした。": "La lecture ne s’est pas terminée en 20 secondes.",
                 "20秒経過：読み取りを終了しました": "20 secondes écoulées : lecture terminée",
@@ -2329,6 +2364,10 @@
                 "🔒 システム暗号化": "🔒 Chiffrement système",
             },
             "de": {
+                "画像をコピー": "Bild kopieren",
+                "画像をコピーしました": "Bild kopiert",
+                "画像をコピーできませんでした。「画像を保存」または「共有」をご利用ください。": "Das Bild konnte nicht kopiert werden. Bitte Bild speichern oder Teilen verwenden.",
+                "パスワードは半角英数字のみ入力できます。": "Das Passwort darf nur die Buchstaben A-Z, a-z und die Ziffern 0-9 enthalten.",
                 "(未読取)": "(nicht gelesen)",
                 "20秒以内に読み取りが完了しませんでした。": "Der Scan wurde nicht innerhalb von 20 Sekunden abgeschlossen.",
                 "20秒経過：読み取りを終了しました": "20 Sekunden vergangen: Scan beendet",
@@ -2555,6 +2594,10 @@
                 "🔒 システム暗号化": "🔒 Systemverschlüsselung",
             },
             "hi": {
+                "画像をコピー": "छवि कॉपी करें",
+                "画像をコピーしました": "छवि कॉपी की गई",
+                "画像をコピーできませんでした。「画像を保存」または「共有」をご利用ください。": "छवि कॉपी नहीं हो सकी। कृपया छवि सहेजें या साझा करें का उपयोग करें।",
+                "パスワードは半角英数字のみ入力できます。": "पासवर्ड में केवल A-Z, a-z अक्षर और 0-9 अंक दर्ज किए जा सकते हैं।",
                 "(未読取)": "(नहीं पढ़ा गया)",
                 "20秒以内に読み取りが完了しませんでした。": "20 सेकंड में स्कैन पूरा नहीं हुआ।",
                 "20秒経過：読み取りを終了しました": "20 सेकंड बीत गए: स्कैन समाप्त",
@@ -2781,6 +2824,10 @@
                 "🔒 システム暗号化": "🔒 सिस्टम एन्क्रिप्शन",
             },
             "pt": {
+                "画像をコピー": "Copiar imagem",
+                "画像をコピーしました": "Imagem copiada",
+                "画像をコピーできませんでした。「画像を保存」または「共有」をご利用ください。": "Não foi possível copiar a imagem. Utilize Guardar imagem ou Partilhar.",
+                "パスワードは半角英数字のみ入力できます。": "A palavra-passe só pode conter letras A-Z, a-z e algarismos 0-9.",
                 "(未読取)": "(não lido)",
                 "20秒以内に読み取りが完了しませんでした。": "A leitura não terminou em 20 segundos.",
                 "20秒経過：読み取りを終了しました": "20 segundos decorridos: leitura terminada",
@@ -15195,6 +15242,7 @@
 
         function qrMakeOpen() {
             qrMakeShowError('');
+            qrMakeShowCopyStatus('');
             document.getElementById('qrMakeForm').style.display = '';
             document.getElementById('qrMakeResult').style.display = 'none';
             qrMakeSyncMode();
@@ -15215,6 +15263,10 @@
             if (!data1.trim()) { qrMakeShowError(t('第1QRのデータを入力してください')); return; }
             if (!data2.trim()) { qrMakeShowError(t('第2QRのデータを入力してください')); return; }
             if (appEnc && !password) { qrMakeShowError(t('パスワードを入力してください')); return; }
+            if (appEnc && /[^A-Za-z0-9]/.test(password)) {
+                qrMakeShowError(t('パスワードは半角英数字のみ入力できます。'));
+                return;
+            }
 
             try {
                 qrMakeLastResult = qrMakeBuildTwin(data1, data2, appEnc, password);
@@ -15294,6 +15346,35 @@
             }
         }
 
+        function qrMakeShowCopyStatus(msg, isError = false) {
+            const el = document.getElementById('qrMakeCopyStatus');
+            if (!el) return;
+            el.innerText = msg;
+            el.style.color = isError ? '#ff5252' : '#81c784';
+            el.style.display = msg ? '' : 'none';
+        }
+
+        async function qrMakeCopyImage() {
+            const button = document.getElementById('qrMakeCopyBtn');
+            if (!qrMakeLastResult || button.disabled) return;
+            qrMakeShowCopyStatus('');
+            button.disabled = true;
+            try {
+                if (!navigator.clipboard || typeof navigator.clipboard.write !== 'function'
+                    || typeof ClipboardItem !== 'function') {
+                    throw new Error('Image clipboard unavailable');
+                }
+                // Start the clipboard write during the click; PNG encoding may finish later.
+                const item = new ClipboardItem({ 'image/png': qrMakeCanvasToBlob() });
+                await navigator.clipboard.write([item]);
+                qrMakeShowCopyStatus(t('画像をコピーしました'));
+            } catch (e) {
+                qrMakeShowCopyStatus(t('画像をコピーできませんでした。「画像を保存」または「共有」をご利用ください。'), true);
+            } finally {
+                button.disabled = false;
+            }
+        }
+
         function qrMakeShowSaveFallback(blob) {
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -15310,6 +15391,7 @@
             document.getElementById('qrMakeResult').style.display = 'none';
             document.getElementById('qrMakeForm').style.display = '';
             qrMakeShowError('');
+            qrMakeShowCopyStatus('');
         }
 
         document.addEventListener('DOMContentLoaded', function () {
@@ -15322,6 +15404,7 @@
             on('qrMakeRunBtn', qrMakeRun);
             on('qrMakeShareBtn', qrMakeShare);
             on('qrMakeSaveBtn', qrMakeSave);
+            on('qrMakeCopyBtn', qrMakeCopyImage);
             on('qrMakeAgainBtn', qrMakeAgain);
             const n = document.getElementById('qrMakeModeNormal');
             const a = document.getElementById('qrMakeModeAppEnc');
